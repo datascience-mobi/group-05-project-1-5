@@ -8,11 +8,12 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
+# 1. Data Cleanup & Descriptive Statistics
 
-#Load dataset
+### Load dataset
 allDepMapData = readRDS("DepMap19Q1_allData.RDS")
 
-#Creation of sub matrices
+### Creation of sub matrices
 expression = allDepMapData[["expression"]]
 copynumber = allDepMapData[["copynumber"]]
 mutation = allDepMapData[["mutation"]]
@@ -20,11 +21,11 @@ kd.ceres = allDepMapData[["kd.ceres"]]
 kd.prob = allDepMapData[["kd.prob"]]
 annotation = allDepMapData[["annotation"]]
 
-#Defining a criterion to reducing the patients to head and neck cancer patients
+### Reducing the samples to head and neck cancer samples
 anno.HNC = annotation[which(annotation$Primary.Disease == "Head and Neck Cancer"), ]
 ID = anno.HNC$DepMap_ID
 
-#Filtering of sub matrices by primary disease "Head and neck cancer"
+### Filtering of sub matrices by primary disease "Head and neck cancer"
 expression = expression[ , which(colnames(expression) %in% ID)]
 copynumber = copynumber[ , which(colnames(copynumber) %in% ID)]
 kd.ceres = kd.ceres[ , which(colnames(kd.ceres) %in% ID)]
@@ -32,3 +33,8 @@ kd.prob = kd.prob[ , which(colnames(kd.prob) %in% ID)]
 mutation = mutation[ID]
 
 
+# 2. Identify genes of interest
+
+# 3. Find SL/SDL partner
+
+# 4. Mutation prediction
