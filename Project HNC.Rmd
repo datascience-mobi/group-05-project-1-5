@@ -8,6 +8,7 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
+# 1. Data Cleanup & Descriptive Statistics
 
 ### Load dataset
 allDepMapData = readRDS("DepMap19Q1_allData.RDS")
@@ -32,3 +33,8 @@ kd.prob = kd.prob[ , which(colnames(kd.prob) %in% ID)]
 mutation = mutation[ID]
 
 
+# 2. Identify genes of interest
+
+# 3. Find SL/SDL partner
+
+# 4. Mutation prediction
