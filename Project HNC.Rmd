@@ -8,8 +8,11 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
+
 # 1. Data Cleanup & Descriptive Statistics
 
+## Load data and define HNC variables
+````{r}
 ### Load dataset
 allDepMapData = readRDS("DepMap19Q1_allData.RDS")
 
@@ -31,8 +34,69 @@ copynumber = copynumber[ , which(colnames(copynumber) %in% ID)]
 kd.ceres = kd.ceres[ , which(colnames(kd.ceres) %in% ID)]
 kd.prob = kd.prob[ , which(colnames(kd.prob) %in% ID)]
 mutation = mutation[ID]
+```
 
+## Expression analysis
 
+### Compare the mean gene expression of all samples with just HNC samples
+```{r}
+mean_exp_all = apply(allDepMapData$expression, 1, function(x) {
+     mean(x)
+ })
+ 
+mean_exp_HNC = apply(expression, 1, function(x) {
+     mean(x)
+ })
+
+t.test(mean_exp_all, mean_exp_HNC, paired = TRUE)
+
+rm(mean_exp_HNC)
+
+```
+
+### Compare mean TP53 gene expression of all samples with those samples which have no deleterious TP53 mutation
+```{r}
+all_mutation = do.call(rbind, allDepMapData$mutation)
+
+all_TP53 = all_mutation[which(all_mutation$Hugo_Symbol == "TP53" & all_mutation$isDeleterious == FALSE), ]
+
+TP53.ID = all_TP53$DepMap_ID
+
+paste("Mean Tp53 gene expression of:")
+
+paste("samples with no deleterious TP53 mutation:  ",
+      mean(t(allDepMapData$expression["TP53", which(colnames(allDepMapData$expression) %in% TP53.ID)]))
+)
+
+paste("all samples:                                ",
+      mean(t(allDepMapData$expression["TP53",]))
+)
+
+rm(all_TP53, TP53.ID)
+```
+
+### Plot some genes
+```{r}
+sample1 = data.frame(Genes=rownames(expression),Values=expression$`ACH-000188`)
+sample1$Group<-ifelse(sample1$Values>1,"A","B")
+sample1 = sample1[1:30,] 
+ggplot(sample1,aes(x=Genes,y=Values,fill=Group))+geom_bar(stat="identity")+coord_flip()
+rm(sample1)
+```
+### Plot the 25 most under- and overexpressed genes
+```{r}
+expr.norm = apply(expression, 2, function(x) {
+    x - mean_exp_all
+})
+expr.norm = as.data.frame(expr.norm)
+sample1.1 = data.frame(Genes=rownames(expr.norm),Values=expr.norm$`ACH-000188`)
+sample1.1$Group<-ifelse(sample1.1$Values>0,"overexpressed","underexpressed")
+l = quantile(expr.norm$`ACH-000188`, probs = seq(0, 1, 0.0005))[2]
+h = quantile(expr.norm$`ACH-000188`, probs = seq(0, 1, 0.0005))[2000]
+sample1.1 = sample1.1[which(sample1.1$Values < l | sample1.1$Values > h),] 
+ggplot(sample1.1,aes(x=Genes,y=Values,fill=Group))+geom_bar(stat="identity")+coord_flip()
+rm(sample1.1, l, h)
+```
 # 2. Identify genes of interest
 
 # 3. Find SL/SDL partner
