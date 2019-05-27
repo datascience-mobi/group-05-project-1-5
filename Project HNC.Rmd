@@ -8,8 +8,11 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
+
 # 1. Data Cleanup & Descriptive Statistics
 
+## Load data and define HNC variables
+````{r}
 ### Load dataset
 allDepMapData = readRDS("DepMap19Q1_allData.RDS")
 
@@ -26,12 +29,20 @@ anno.HNC = annotation[which(annotation$Primary.Disease == "Head and Neck Cancer"
 ID = anno.HNC$DepMap_ID
 
 ### Filtering of sub matrices by primary disease "Head and neck cancer"
-expression = expression[ , which(colnames(expression) %in% ID)]
-copynumber = copynumber[ , which(colnames(copynumber) %in% ID)]
-kd.ceres = kd.ceres[ , which(colnames(kd.ceres) %in% ID)]
-kd.prob = kd.prob[ , which(colnames(kd.prob) %in% ID)]
-mutation = mutation[ID]
+expression.HNC = expression[ , which(colnames(expression) %in% ID)]
+copynumber.HNC = copynumber[ , which(colnames(copynumber) %in% ID)]
+kd.ceres.HNC = kd.ceres[ , which(colnames(kd.ceres) %in% ID)]
+kd.prob.HNC = kd.prob[ , which(colnames(kd.prob) %in% ID)]
+mutation.HNC = mutation[ID]
+```
 
+## Expression analysis
+
+## Copynumber Alteration
+
+## Mutation
+
+## Knockdown
 
 # 2. Identify genes of interest
 
