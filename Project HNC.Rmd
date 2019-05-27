@@ -12,7 +12,7 @@ knitr::opts_chunk$set(echo = TRUE)
 # 1. Data Cleanup & Descriptive Statistics
 
 ## Load data and define HNC variables
-````{r}
+```{r}
 ### Load dataset
 allDepMapData = readRDS("DepMap19Q1_allData.RDS")
 
