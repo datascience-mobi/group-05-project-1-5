@@ -7,12 +7,14 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-library("ggplot2")
+library(ggplot2)
+library(ggpubr)
+theme_set(theme_pubr())
 ```
 
 # 1. Data Cleanup & Descriptive Statistics
 
-## Load data and define HNC variables
+## Loading data and defining HNC variables
 ```{r}
 ### Load dataset
 allDepMapData = readRDS("DepMap19Q1_allData.RDS")
@@ -24,6 +26,7 @@ mutation = allDepMapData[["mutation"]]
 kd.ceres = allDepMapData[["kd.ceres"]]
 kd.prob = allDepMapData[["kd.prob"]]
 annotation = allDepMapData[["annotation"]]
+rm(allDepMapData)
 
 ### Reducing the samples to head and neck cancer samples
 annotation.HNC = annotation[which(annotation$Primary.Disease == "Head and Neck Cancer"), ]
@@ -39,53 +42,78 @@ mutation.HNC = mutation[ID]
 
 ## Expression analysis
 
-### Compare the mean gene expression of all samples with just HNC samples
+### Checking fo NAs
 ```{r}
-mean.exp.all = apply(expression, 1, mean)
- 
+sum(is.na(expression) == TRUE)
+```
+
+### Comparing mean gene expression of all samples with just HNC samples
+```{r}
+expression.reference = expression[ , -which(colnames(expression) %in% ID)]
+mean.exp.reference = apply(expression.reference, 1, mean)
 mean.exp.HNC = apply(expression.HNC, 1, mean)
 
-t.test(mean.exp.all, mean.exp.HNC, paired = TRUE)
+#Checking if expression is normally distributed
+HNC = data.frame(expression_values = mean.exp.HNC, sample = "HNC")
+reference = data.frame(expression_values = mean.exp.reference, sample = "reference")
+mean.expression = rbind(reference, HNC)
 
-rm(mean.exp.HNC)
+ggqqplot(mean.expression, x = "expression_values",
+   color = "sample", 
+   palette = c("#FC4E07", "#0073C2FF"),
+   ggtheme = theme_pubclean())
 
+rm(HNC, reference, mean.expression)
+```
+Result: Gene espression is not normally distributed.
+```{r}
+# Applying Wilcoxon rank sum test because expression is not normally distributed 
+wilcox.test(mean.exp.HNC, mean.exp.reference)
 ```
 Result: Mean gene expression differs between HNC samples and all samples significantly.
 
-### Compare mean TP53 gene expression of all samples with and without deleterious TP53 mutation
+### Comparing mean TP53 gene expression of all samples with and without deleterious TP53 mutation
 ```{r}
 mutation.all = do.call(rbind, mutation)
-
 TP53.mut.ID = mutation.all[which(mutation.all$Hugo_Symbol == "TP53" & mutation.all$isDeleterious == TRUE), ]$DepMap_ID
 TP53.norm.ID = annotation$DepMap_ID[-which(annotation$DepMap_ID %in% TP53.mut.ID)]
+exp.TP53.mut = as.numeric(expression["TP53", TP53.mut.ID])
+exp.TP53.norm = as.numeric(expression["TP53", TP53.norm.ID])
 
-t.test(expression["TP53", TP53.mut.ID], expression["TP53", TP53.norm.ID])
+# Applying Wilcoxon rank sum test because expression is not normally distributed
+wilcox.test(exp.TP53.mut , exp.TP53.norm)
 
-rm(TP53.mut.ID, TP53.norm.ID)
+rm(TP53.mut.ID, TP53.norm.ID, exp.TP53.mut, exp.TP53.norm)
 ```
 Result: Gene expression of varies significantly whether the samples has or has no a deleterious TP53 mutation.
 
-### Plot some genes
+### Checking how the expression values are distributed
 ```{r}
-sample1 = data.frame(Genes=rownames(expression.HNC),Values=expression.HNC$`ACH-000188`)
-sample1$Group<-ifelse(sample1$Values>2,"A","B")
-sample1 = sample1[1:30,] 
-ggplot(sample1,aes(x=Genes,y=Values,fill=Group))+geom_bar(stat="identity")+coord_flip()
-rm(sample1)
+expression.values = data.frame(expression_value = mean.exp.HNC)
+# density plot
+ggdensity(expression.values, x = "expression_value", xlab = "expression value",
+          fill = "#0073C2FF", color = "#0073C2FF",
+          add = "mean", rug = TRUE)
+# histogram
+gghistogram(expression.values, x = "expression_value", xlab = "expression value", bins = 60, 
+            fill = "#0073C2FF", color = "#0073C2FF",
+            add = "mean", rug = TRUE)
+
+rm(expression.values)
 ```
-### Plot the 25 most under- and overexpressed genes
+### Plotting the 25 most under- and overexpressed genes of the first sample
 ```{r}
-expr.norm = apply(expression.HNC, 2, function(x) {
-    x - mean.exp.all
+expr.HNC.norm = apply(expression.HNC, 2, function(x) {
+    x - mean.exp.reference
 })
-expr.norm = as.data.frame(expr.norm)
-sample1.n = data.frame(Genes=rownames(expr.norm),Values=expr.norm$`ACH-000188`)
-sample1.n$Group<-ifelse(sample1.n$Values>0,"overexpressed","underexpressed")
-l = quantile(expr.norm$`ACH-000188`, probs = seq(0, 1, 0.0005))[2]
-h = quantile(expr.norm$`ACH-000188`, probs = seq(0, 1, 0.0005))[2000]
-sample1.n = sample1.n[which(sample1.n$Values < l | sample1.n$Values > h),] 
-ggplot(sample1.n,aes(x=Genes,y=Values,fill=Group))+geom_bar(stat="identity")+coord_flip()
-rm(sample1.n, l, h)
+expr.HNC.norm = as.data.frame(expr.HNC.norm)
+sample1 = data.frame(Genes=rownames(expr.HNC.norm),Values=expr.HNC.norm$`ACH-000188`)
+sample1$Group<-ifelse(sample1$Values>0,"overexpressed","underexpressed")
+l = quantile(expr.HNC.norm$`ACH-000188`, probs = seq(0, 1, 0.0005))[2]
+h = quantile(expr.HNC.norm$`ACH-000188`, probs = seq(0, 1, 0.0005))[2000]
+sample1 = sample1[which(sample1$Values < l | sample1$Values > h),] 
+ggplot(sample1,aes(x=Genes,y=Values,fill=Group))+geom_bar(stat="identity")+coord_flip()
+rm(sample1, l, h)
 ```
 
 ## Copynumber Alteration
