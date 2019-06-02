@@ -37,22 +37,26 @@ mutation = mutation[ID]
 
 ###Range of data
 range(kd.ceres)
-###Example EGFR
-summary(esgeneT$EGFR)
 
 ##Definition of a compare group
+```{r}
 comparegroup = allDepMapData[["kd.ceres"]]
 comparegroup = comparegroup[,- which(colnames(kd.ceres) %in% ID)]
 
 ##Are there genes that tend to be more essential in HNC?
 esgene1 = kd.ceres[-which(rowMeans(kd.ceres)> rowMeans(comparegroup)),]
-
+```
 ##Transposition of matrix esgene1
 esgeneT <- as.data.frame(t(esgene1))
 
-##Boxplot of 10 genes
+###Example EGFR
+```{r}
+summary(esgeneT$EGFR)
+```
 
+##Boxplot of 10 genes
+```{r}
 boxplot(esgeneT[1:10], xlab = "gene", horizontal = F)
 abline(col = c("blue", "red", "black", "orange"), 
     lty = 2)
-
+```
