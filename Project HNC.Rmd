@@ -124,18 +124,18 @@ rm(sample1, l, h)
 
 ### Checking fo NAs and range in HNC patients
 ```{r}
-sum(is.na(kd.ceres.HNC) == TRUE)###Range of data
+sum(is.na(kd.ceres.HNC) == TRUE) # Range of data
 range(kd.ceres.HNC)
 ```
-###Definition of a compare group
+### Definition of a compare group
 ```{r}
 kd.ceres.reference = kd.ceres[ , -which(colnames(kd.ceres) %in% ID)]
 
-### Comparing mean knockdown data of all samples with just HNC samples
+# Comparing mean knockdown data of all samples with just HNC samples
 mean.kd.ceres.reference = apply(kd.ceres.reference, 1, mean)
 mean.kd.ceres = apply(kd.ceres.HNC, 1, mean)
 
-#Checking if knockdown values are normally distributed
+# Checking if knockdown values are normally distributed
 kd.ceres.HNC.dist = data.frame(kd_values = mean.kd.ceres, sample = "Knockdown HNC")
 kd.ceres.reference.dist = data.frame(kd_values = mean.kd.ceres.reference, sample = "reference HNC")
 mean.kd.ceres.dist = rbind(kd.ceres.reference.dist, kd.ceres.HNC.dist)
@@ -145,30 +145,30 @@ ggqqplot(mean.kd.ceres.dist, x = "kd_values",
    palette = c("#FC4E07", "#0073C2FF"),
    ggtheme = theme_pubclean())
 
-#result kd.ceres calues are not normal distributed
+# result kd.ceres calues are not normal distributed
 
-##Are there genes that tend to be more essential in HNC?
+# Are there genes that tend to be more essential in HNC?
 esgene1 = kd.ceres.HNC[-which(rowMeans(kd.ceres.HNC)> rowMeans(kd.ceres.reference)),]
 ```
-##Checking the distribution for knockdown values
+### Checking the distribution for knockdown values
 ```{r}
 gghistogram(kd.ceres.HNC.dist, x = "kd_values", xlab = "knockdown values", bins = 60, 
             fill = "#0073C2FF", color = "#0073C2FF",
             add = "mean", rug = TRUE)
 ```
-# Applying Wilcoxon rank sum test because knockdown values are not normally distributed 
+### Applying Wilcoxon rank sum test because knockdown values are not normally distributed 
 ```{r}
 wilcox.test(mean.kd.ceres, mean.kd.ceres.reference)
 ```
 
-####Example EGFR
+### Example EGFR
 ```{r}
-###Transposition of matrix esgene1
+# Transposition of matrix esgene1
 esgeneT <- as.data.frame(t(esgene1))
 summary(esgeneT$EGFR)
 ```
 
-###Boxplot of 20 genes
+### Boxplot of 20 genes
 ```{r}
 boxplot(esgeneT[810:830], xlab = "gene", horizontal = F)
 abline(col = c("blue", "red", "black", "orange"), 
