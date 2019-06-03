@@ -145,18 +145,18 @@ ggqqplot(mean.kd.ceres.dist, x = "kd_values",
    palette = c("#FC4E07", "#0073C2FF"),
    ggtheme = theme_pubclean())
 
-#result kd.ceres calues are not normal distributed
-
 ##Are there genes that tend to be more essential in HNC?
 esgene1 = kd.ceres.HNC[-which(rowMeans(kd.ceres.HNC)> rowMeans(kd.ceres.reference)),]
 ```
+####result: kd.ceres values are not normal distributed
+
 ##Checking the distribution for knockdown values
 ```{r}
 gghistogram(kd.ceres.HNC.dist, x = "kd_values", xlab = "knockdown values", bins = 60, 
             fill = "#0073C2FF", color = "#0073C2FF",
             add = "mean", rug = TRUE)
 ```
-# Applying Wilcoxon rank sum test because knockdown values are not normally distributed 
+## Applying Wilcoxon rank sum test because knockdown values are not normally distributed 
 ```{r}
 wilcox.test(mean.kd.ceres, mean.kd.ceres.reference)
 ```
