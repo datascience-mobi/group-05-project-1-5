@@ -44,7 +44,7 @@ mutation.HNC = mutation[ID]
 
 ### analysis of NA values 
 
-First: Examination of NA values in the copynumber.HNC data
+Examination of NA values in the copynumber.HNC data
 ```{r}
 NA.rows = apply(copynumber.HNC,1, function(x) {
           sum(is.na(x))
@@ -57,7 +57,7 @@ Only 107 out of 23299 gens have NA values and are therefore deleted from the cop
 copynumber.HNC = copynumber.HNC[-NA.rows,]
 dim(copynumber.HNC)
 ```
-Second: creating a reference data and examination of its NA values 
+Creating a reference data and examination of its NA values 
 ```{r}
 copynumber.Reference = copynumber[,-which(colnames(copynumber) %in% ID)]
 dim(copynumber.Reference)
@@ -74,7 +74,7 @@ length(NA.rows.ref)
 ```{r}
 summary(NA.rows == NA.rows.ref)
 ```
-Gens with NA values are the same for the HNC samples and all the other samples. Therefore they can be deleted as well in the reference data.
+Gens with NA values are the same for the HNC samples compared to all the other samples. Therefore they can be deleted as well in the reference data.
 
 ```{r}
 copynumber.Reference = copynumber.Reference[-NA.rows.ref,]
@@ -95,7 +95,7 @@ copynumber.HNC.mean = apply(copynumber.HNC ,1, function(x) {
 
 ```
 
-Creatting a matrix of copynumber values. The values are normaliezed to the mean copynumbers of the reference data. For further analysingthe matrix is ordered in a decreasing manner.
+Creating a matrix of copynumber values. The values are normaliezed to the mean copynumbers of the reference data. For further analysing the matrix is ordered in a decreasing manner.
 ```{r}
 copynumber.HNC.norm = copynumber.HNC.mean - copynumber.ref.mean
 copynumber.HNC.norm = copynumber.HNC.norm[order(copynumber.HNC.norm, decreasing = TRUE )]
