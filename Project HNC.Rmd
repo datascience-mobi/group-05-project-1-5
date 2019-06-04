@@ -7,12 +7,18 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
 ```
 
-##Load dataset
+
+# 1. Data Cleanup & Descriptive Statistics
+
+## Load data and define HNC variables
+```{r}
+### Load dataset
 allDepMapData = readRDS("DepMap19Q1_allData.RDS")
 
-##Creation of sub matrices
+### Creation of sub matrices
 expression = allDepMapData[["expression"]]
 copynumber = allDepMapData[["copynumber"]]
 mutation = allDepMapData[["mutation"]]
@@ -20,15 +26,103 @@ kd.ceres = allDepMapData[["kd.ceres"]]
 kd.prob = allDepMapData[["kd.prob"]]
 annotation = allDepMapData[["annotation"]]
 
-##Defining a criterion to reducing the patients to head and neck cancer patients
+### Reducing the samples to head and neck cancer samples
 anno.HNC = annotation[which(annotation$Primary.Disease == "Head and Neck Cancer"), ]
 ID = anno.HNC$DepMap_ID
 
-##Filtering of sub matrices by primary disease "Head and neck cancer"
-expression = expression[ , which(colnames(expression) %in% ID)]
-copynumber = copynumber[ , which(colnames(copynumber) %in% ID)]
-kd.ceres = kd.ceres[ , which(colnames(kd.ceres) %in% ID)]
-kd.prob = kd.prob[ , which(colnames(kd.prob) %in% ID)]
-mutation = mutation[ID]
+### Filtering of sub matrices by primary disease "Head and neck cancer"
+expression.HNC = expression[ , which(colnames(expression) %in% ID)]
+copynumber.HNC = copynumber[ , which(colnames(copynumber) %in% ID)]
+kd.ceres.HNC = kd.ceres[ , which(colnames(kd.ceres) %in% ID)]
+kd.prob.HNC = kd.prob[ , which(colnames(kd.prob) %in% ID)]
+mutation.HNC = mutation[ID]
+```
 
+## Expression analysis
 
+## Copynumber Alteration
+
+### analysis of NA values 
+
+First: Examination of NA values in the copynumber.HNC data
+```{r}
+NA.rows = apply(copynumber.HNC,1, function(x) {
+          sum(is.na(x))
+})
+NA.rows = which( NA.rows > 0)
+length(NA.rows)
+```
+Only 107 out of 23299 gens have NA values and are therefore deleted from the copynumber.HNC matrix
+```{r}
+copynumber.HNC = copynumber.HNC[-NA.rows,]
+dim(copynumber.HNC)
+```
+Second: creating a reference data and examination of its NA values 
+```{r}
+copynumber.Reference = copynumber[,-which(colnames(copynumber) %in% ID)]
+dim(copynumber.Reference)
+```
+
+```{r}
+NA.rows.ref = apply(copynumber.Reference,1, function(x) {
+          sum(is.na(x))
+})
+NA.rows.ref = which( NA.rows.ref > 0)
+length(NA.rows.ref)
+```
+
+```{r}
+summary(NA.rows == NA.rows.ref)
+```
+Gens with NA values are the same for the HNC samples and all the other samples. Therefore they can be deleted as well in the reference data.
+
+```{r}
+copynumber.Reference = copynumber.Reference[-NA.rows.ref,]
+dim(copynumber.Reference)
+```
+### Normalisation of the copynumber values
+
+For the HNC normalisation we will use the mean CN value per gen of the reference data.
+
+```{r}
+copynumber.ref.mean = apply(copynumber.Reference,1, function(x) {
+  mean(x)
+})
+
+copynumber.HNC.mean = apply(copynumber.HNC ,1, function(x) {
+  mean(x)
+})
+
+```
+
+Creatting a matrix of copynumber values. The values are normaliezed to the mean copynumbers of the reference data. For further analysingthe matrix is ordered in a decreasing manner.
+```{r}
+copynumber.HNC.norm = copynumber.HNC.mean - copynumber.ref.mean
+copynumber.HNC.norm = copynumber.HNC.norm[order(copynumber.HNC.norm, decreasing = TRUE )]
+copynumber.HNC.norm = as.data.frame(copynumber.HNC.norm)
+copynumber.HNC.norm$genes = row.names(copynumber.HNC.norm)
+```
+
+Plotting genes with the highest and lowest copynumbers. 
+```{r}
+
+copynumber.HNC.norm$Group <- ifelse(copynumber.HNC.norm$copynumber.HNC.norm > 0,"high CN","low CN")
+ggplot(copynumber.HNC.norm[c(1:20,23172:23192),],aes(x=genes,y=copynumber.HNC.norm,fill=Group))+geom_bar(stat="identity")+coord_flip()
+                                                                                          
+
+```
+###Cleanup of the environment
+```{r}
+rm(NA.rows)
+rm(NA.rows.ref)
+```
+
+## Mutation
+
+## Knockdown
+
+# 2. Identify genes of interest
+
+# 3. Find SL/SDL partner
+
+# 4. Mutation prediction
