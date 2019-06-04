@@ -16,10 +16,10 @@ theme_set(theme_pubr())
 
 ## Loading data and defining HNC variables
 ```{r}
-### Load dataset
+# Load dataset
 allDepMapData = readRDS("DepMap19Q1_allData.RDS")
 
-### Creation of sub matrices
+# Creation of sub matrices
 expression = allDepMapData[["expression"]]
 copynumber = allDepMapData[["copynumber"]]
 mutation = allDepMapData[["mutation"]]
@@ -28,11 +28,11 @@ kd.prob = allDepMapData[["kd.prob"]]
 annotation = allDepMapData[["annotation"]]
 rm(allDepMapData)
 
-### Reducing the samples to head and neck cancer samples
+# Reducing the samples to head and neck cancer samples
 annotation.HNC = annotation[which(annotation$Primary.Disease == "Head and Neck Cancer"), ]
 ID = annotation.HNC$DepMap_ID
 
-### Filtering of sub matrices by primary disease "Head and neck cancer"
+# Filtering of sub matrices by primary disease "Head and neck cancer"
 expression.HNC = expression[ , which(colnames(expression) %in% ID)]
 copynumber.HNC = copynumber[ , which(colnames(copynumber) %in% ID)]
 kd.ceres.HNC = kd.ceres[ , which(colnames(kd.ceres) %in% ID)]
@@ -53,7 +53,7 @@ expression.reference = expression[ , -which(colnames(expression) %in% ID)]
 mean.exp.reference = apply(expression.reference, 1, mean)
 mean.exp.HNC = apply(expression.HNC, 1, mean)
 
-#Checking if expression is normally distributed
+# Checking if expression is normally distributed
 HNC = data.frame(expression_values = mean.exp.HNC, sample = "HNC")
 reference = data.frame(expression_values = mean.exp.reference, sample = "reference")
 mean.expression = rbind(reference, HNC)
@@ -124,7 +124,7 @@ rm(sample1, l, h)
 
 ### Checking fo NAs and range in HNC patients
 ```{r}
-sum(is.na(kd.ceres.HNC) == TRUE)###Range of data
+sum(is.na(kd.ceres.HNC) == TRUE) # Range of data
 range(kd.ceres.HNC)
 ```
 ### Definition of a compare group
