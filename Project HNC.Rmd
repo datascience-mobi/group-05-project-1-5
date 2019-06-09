@@ -263,6 +263,32 @@ abline(col = c("blue", "red", "black", "orange"),
 
 # 2. Identify genes of interest
 
+## Investigate high frequencies of deleterious mutations
+```{r}
+mutation.HNC.bind = do.call(rbind, mutation.HNC) #all mutation data of HNC samples in one dataframe
+
+heatmap.genes = as.data.frame(table(mutation.HNC.bind$Hugo_Symbol)) #dataframe with all mutated genes in HNC samples
+
+heatmap.samples = lapply(1:(length(ID)), function(a) {
+  heatmap.genes$a = ifelse(heatmap.genes$Var1 %in% mutation.HNC[[a]]$Hugo_Symbol, 1, 0) #per HNC sample: every gene which is mutated gets a 1, otherwise a 0
+})
+
+# define row and column names
+heatmap.data = as.data.frame(do.call(cbind, heatmap.samples))
+rownames(heatmap.data) = heatmap.genes$Var1
+colnames(heatmap.data) = ID
+
+# Order from high to low frequency
+heatmap.data$mean = apply(heatmap.data, 1, sum)
+heatmap.data = heatmap.data[order(-heatmap.data$mean), 1:27] 
+
+# heatmap
+heatmap(data.matrix(heatmap.data)[1:80,], Rowv=NA, Colv=NA, col = c("mediumseagreen", "tomato2"), scale="column")
+
+#clean up the enviroment
+rm(heatmap.genes, heatmap.samples)
+```
+
 # 3. Find SL/SDL partner
 
 # 4. Mutation prediction
