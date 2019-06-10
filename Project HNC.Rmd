@@ -86,8 +86,8 @@ Result: Mean gene expression differs between HNC samples and all samples signifi
 
 ### Comparing mean TP53 gene expression of all samples with and without deleterious TP53 mutation
 ```{r}
-mutation.all = do.call(rbind, mutation)
-TP53.mut.ID = mutation.all[which(mutation.all$Hugo_Symbol == "TP53" & mutation.all$isDeleterious == TRUE), ]$DepMap_ID
+mutation.df = do.call(rbind, mutation)
+TP53.mut.ID = mutation.df[which(mutation.df$Hugo_Symbol == "TP53" & mutation.df$isDeleterious == TRUE), ]$DepMap_ID
 TP53.norm.ID = annotation$DepMap_ID[-which(annotation$DepMap_ID %in% TP53.mut.ID)]
 exp.TP53.mut = as.numeric(expression["TP53", TP53.mut.ID])
 exp.TP53.norm = as.numeric(expression["TP53", TP53.norm.ID])
@@ -265,9 +265,13 @@ abline(col = c("blue", "red", "black", "orange"),
 
 ## Investigate high frequencies of deleterious mutations
 ```{r}
-mutation.HNC.bind = do.call(rbind, mutation.HNC) #all mutation data of HNC samples in one dataframe
+mutation.HNC.del = lapply(1:length(ID), function(a) {
+  out = mutation.HNC[[a]][which(mutation.HNC[[a]]$isDeleterious == TRUE),] #choose only deleterious mutations
+})
 
-heatmap.genes = as.data.frame(table(mutation.HNC.bind$Hugo_Symbol)) #dataframe with all mutated genes in HNC samples
+mutation.HNC.del.df = do.call(rbind, mutation.HNC.del) #all mutation data of HNC samples in one dataframe
+
+heatmap.genes = as.data.frame(table(mutation.HNC.del.df$Hugo_Symbol)) #dataframe with all mutated genes in HNC samples
 
 heatmap.samples = lapply(1:(length(ID)), function(a) {
   heatmap.genes$a = ifelse(heatmap.genes$Var1 %in% mutation.HNC[[a]]$Hugo_Symbol, 1, 0) #per HNC sample: every gene which is mutated gets a 1, otherwise a 0
