@@ -11,16 +11,18 @@ library(ggplot2)
 library(ggpubr)
 theme_set(theme_pubr())
 library(png)
+root.dir = dirname(rstudioapi::getSourceEditorContext()$path)
 ```
+
 # General Introduction
 Head and neck cancer is defined as a group of cancers, concerning the mouth, nose and throat. With over 90%, Squamous cell carcinoma is the most common type in HNC patients.With 5.5 million affected people in 2015 it is the seventh most frequent cancer and the ninth most frequent cause of death. (Information required)
 
 
-![](HNC_Kopf.png)
+![](images/HNC_Kopf.png)
 In the century of next generation sequencing, the genome became an interesting target for scientists.Approaches that directly affect important oncogenes often fail due to the fact that these genes play an improtant role in healthy cells.The researchers in our paper investigated synthetic lethality and synthetic dosage letahlity that uses gene interactions to affect tumorous proliferation. Synthetic letahlity is a gene interaction in which single-gene defects
 are compatible with cell viability, but the combination of gene effects results in cell death.Synthetic dosage lethality occurs, when the overexpression of one gene is combined with the knockout of another gene.
 
-![](Daisy.png)
+![](images/Daisy.png)
 
 
 
@@ -267,6 +269,7 @@ abline(col = c("blue", "red", "black", "orange"),
 ```{r}
 mutation.HNC.del = lapply(1:length(ID), function(a) {
   out = mutation.HNC[[a]][which(mutation.HNC[[a]]$isDeleterious == TRUE),] # choose only deleterious mutations
+  return(out)
 })
 
 mutation.HNC.del.df = do.call(rbind, mutation.HNC.del) # all mutation data of HNC samples in one dataframe
