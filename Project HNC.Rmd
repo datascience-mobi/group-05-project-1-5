@@ -287,7 +287,7 @@ heatmap.data$mean = apply(heatmap.data, 1, sum)
 heatmap.data = heatmap.data[order(-heatmap.data$mean), 1:27] 
 
 # heatmap
-heatmap(data.matrix(heatmap.data)[1:80,], Rowv=NA, Colv=NA, col = c("mediumseagreen", "tomato2"), scale="column")
+heatmap(data.matrix(heatmap.data)[1:80,], Rowv=NA, Colv=NA, col = c("lightgrey", "tomato2"), scale="column")
 
 # clean up the enviroment
 rm(heatmap.genes, heatmap.samples)
