@@ -12,6 +12,7 @@ library(ggpubr)
 theme_set(theme_pubr())
 library(png)
 root.dir = dirname(rstudioapi::getSourceEditorContext()$path)
+'%!in%' <- function(x,y)!('%in%'(x,y))
 ```
 
 # General Introduction
@@ -123,8 +124,8 @@ expr.HNC.norm = apply(expression.HNC, 2, function(x) {
 expr.HNC.norm = as.data.frame(expr.HNC.norm)
 sample1 = data.frame(Genes=rownames(expr.HNC.norm),Values=expr.HNC.norm$`ACH-000188`)
 sample1$Group<-ifelse(sample1$Values>0,"overexpressed","underexpressed")
-l = quantile(expr.HNC.norm$`ACH-000188`, probs = seq(0, 1, 0.0005))[2]
-h = quantile(expr.HNC.norm$`ACH-000188`, probs = seq(0, 1, 0.0005))[2000]
+l = quantile(expr.HNC.norm$`ACH-000188`, probs = 0.0005)
+h = quantile(expr.HNC.norm$`ACH-000188`, probs = 0,9995)
 sample1 = sample1[which(sample1$Values < l | sample1$Values > h),]
 ggplot(sample1,aes(x=Genes,y=Values,fill=Group))+geom_bar(stat="identity")+coord_flip()
 rm(sample1, l, h)
@@ -167,7 +168,9 @@ Gens with NA values are the same for the HNC samples compared to all the other s
 
 ```{r}
 copynumber.reference = copynumber.reference[-NA.rows.ref,]
+copynumber = copynumber[-NA.rows.ref,]
 dim(copynumber.reference)
+dim(copynumber)
 ```
 ### Normalisation of the copynumber values
 
@@ -290,12 +293,113 @@ heatmap.data$mean = apply(heatmap.data, 1, sum)
 heatmap.data = heatmap.data[order(-heatmap.data$mean), 1:27] 
 
 # heatmap
-heatmap(data.matrix(heatmap.data)[1:80,], Rowv=NA, Colv=NA, col = c("lightgrey", "tomato2"), scale="column")
+heatmap(data.matrix(heatmap.data)[1:40,], Rowv=NA, Colv=NA, col = c("lightgrey", "tomato2"), scale="column", cexRow = 0.5, cexCol = 0.8)
 
 # clean up the enviroment
 rm(heatmap.genes, heatmap.samples)
 ```
 
+![](images/frequent_mutations_HNC.png)
+
+```{r}
+goi.lit = data.frame(Gene = c("CDKN2A", "TP53", "CCND1", "EGFR", "PIK3CA", "PTEN", "FAT1", "AJUBA", "NOTCH1", "KMT2D", "NSD1"), Mutation_frequency = c(22, 72, 0.6, 4, 18, 3, 23, 7, 18, 16, 12), CNA_frequency = c(32, 1.4, 25, 11, 21, 4, 8, 1, 4, 0.4, 0.8)) # create dataframe with goi from literature
+
+heatmap_position = lapply(1:nrow(goi.lit), function(a) { 
+  out = grep(goi.lit$Gene[a], rownames(heatmap.data), value = FALSE) # get the position of goi.lit genes in our heatmap
+  return(out[1])
+})
+goi.lit$Heatmap_position = do.call(rbind, heatmap_position) # add heatmap position to goi.lit
+rm(heatmap_position)
+goi.lit = goi.lit[order(goi.lit$Heatmap_position),]
+goi.lit
+
+goi.mut = rownames(heatmap.data)[1:5] # choose the 5 gene with most frequent deleterious mutation
+```
+
 # 3. Find SL/SDL partner
+
+## SL-parter (Bonferroni correction needs to be added)
+
+### SoF
+```{r}
+SL.SoF = lapply(1:length(goi.mut), function(m) {
+  goi = goi.mut[m] # set 1 of 5 goi
+
+  mutated.ID = lapply(1:length(mutation), function(a) {
+    out = ifelse(goi %in% mutation[[a]]$Hugo_Symbol, a, NA) # filter all IDs which have a mutation of goi
+    return(out)
+  })
+
+  not_mutated.ID = grep("NA", mutated.ID, value = FALSE) # ID of samples with no goi mutation
+  mutated.ID = mutated.ID[is.na(mutated.ID) == FALSE] # ID of samples with goi mutation
+  mutated.ID = as.integer(mutated.ID)
+
+  p.value = lapply(1:nrow(copynumber), function(b) {
+    mutated.cna = t(copynumber[b, mutated.ID])
+    not_mutated.cna = t(copynumber[b, not_mutated.ID])
+    p = wilcox.test(mutated.cna, not_mutated.cna, alternative = "greater")$p.value # one sided (greater) Wilcoxon Sum Rank Test 
+  })
+
+  out = data.frame(genes = rownames(copynumber), p_value = do.call(rbind, p.value))
+  out = out[which(out$p_value < 0.05),]
+  return(out)
+})
+names(SL.SoF) = goi.mut
+```
+### Functional examination
+```{r}
+SL.functional.examination = lapply(1:length(goi.mut), function(m) {
+  goi = goi.mut[m] # set 1 of 5 goi
+
+  mutated.ID = lapply(1:length(mutation), function(a) {
+    out = ifelse(goi %in% mutation[[a]]$Hugo_Symbol, a, NA) # filter all IDs which have a mutation of goi
+    return(out)
+  })
+
+  not_mutated.ID = grep("NA", mutated.ID, value = FALSE) # ID of samples with no goi mutation
+  mutated.ID = mutated.ID[is.na(mutated.ID) == FALSE] # ID of samples with goi mutation
+  mutated.ID = as.integer(mutated.ID)
+
+  p.value = lapply(1:nrow(kd.ceres), function(b) {
+    mutated.kd = t(kd.ceres[b, mutated.ID])
+    not_mutated.kd = t(kd.ceres[b, not_mutated.ID])
+    p = wilcox.test(mutated.kd, not_mutated.kd, alternative = "less")$p.value # one sided (less) Wilcoxon Sum Rank Test 
+  })
+
+  out = data.frame(genes = rownames(kd.ceres), p_value = do.call(rbind, p.value))
+  out = out[which(out$p_value < 0.05),]
+  return(out)
+})
+names(SL.functional.examination) = goi.mut
+```
+### Gene coexpression
+```{r}
+SL.coexpression = lapply(1:length(goi.mut), function(m) {
+  goi = goi.mut[m] # set 1 of 5 goi
+
+  p.value = lapply(1:nrow(expression), function(b) {
+    goi.expr = t(expression[goi,])
+    not_goi.expr = t(expression[goi,])
+    p = cor.test(goi.expr, not_goi.expr, method = "spearman", exact = FALSE)$p.value # spearman correlation test
+  })
+
+  out = data.frame(genes = rownames(expression), p_value = do.call(rbind, p.value))
+  out = out[which(out$p_value < 0.05),]
+  return(out)
+})
+
+SL.coexpression = lapply(1:length(SL.coexpression), function(a) {
+  dat_picker <- SL.coexpression[[a]]
+  out <- dat_picker[-which(dat_picker$genes == names(goi.mut[a])),] # sort out correlation between the same gene
+  return(out)
+})
+
+names(SL.coexpression) = goi.mut
+```
+## SDL-parter
+
+### SoF
+### Functional examination
+### Gene coexpression
 
 # 4. Mutation prediction
