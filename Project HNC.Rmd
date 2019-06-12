@@ -210,7 +210,6 @@ rm(NA.rows.ref)
 ```
 
 ## Mutation
-
 ## Knockdown
 
 ### Checking fo NAs and range in HNC patients
@@ -266,8 +265,10 @@ abline(col = c("blue", "red", "black", "orange"),
     lty = 2)
 ```
 
+
 # 2. Identify genes of interest
 
+## k-means clustering of CNA and expression data
 ## Investigate high frequencies of deleterious mutations
 ```{r}
 mutation.HNC.del = lapply(1:length(ID), function(a) {
@@ -316,10 +317,10 @@ goi.lit
 goi.mut = rownames(heatmap.data)[1:5] # choose the 5 gene with most frequent deleterious mutation
 ```
 
+
 # 3. Find SL/SDL partner
 
 ## SL-parter (Bonferroni correction needs to be added)
-
 ### SoF
 ```{r}
 SL.SoF = lapply(1:length(goi.mut), function(m) {
@@ -373,10 +374,16 @@ SL.functional.examination = lapply(1:length(goi.mut), function(m) {
 names(SL.functional.examination) = goi.mut
 ```
 ### Gene coexpression
-## SDL-parter
 
+## SDL-parter
 ### SoF
 ### Functional examination
 ### Gene coexpression
 
-# 4. Mutation prediction
+## Converging the different SL and SDL sets
+
+# 4. Mutation prediction via logistical regression
+
+## Examine correlation between variables
+## train regression model
+## test regression model and compare different variable input
