@@ -373,29 +373,6 @@ SL.functional.examination = lapply(1:length(goi.mut), function(m) {
 names(SL.functional.examination) = goi.mut
 ```
 ### Gene coexpression
-```{r}
-SL.coexpression = lapply(1:length(goi.mut), function(m) {
-  goi = goi.mut[m] # set 1 of 5 goi
-
-  p.value = lapply(1:nrow(expression), function(b) {
-    goi.expr = t(expression[goi,])
-    not_goi.expr = t(expression[goi,])
-    p = cor.test(goi.expr, not_goi.expr, method = "spearman", exact = FALSE)$p.value # spearman correlation test
-  })
-
-  out = data.frame(genes = rownames(expression), p_value = do.call(rbind, p.value))
-  out = out[which(out$p_value < 0.05),]
-  return(out)
-})
-
-SL.coexpression = lapply(1:length(SL.coexpression), function(a) {
-  dat_picker <- SL.coexpression[[a]]
-  out <- dat_picker[-which(dat_picker$genes == names(goi.mut[a])),] # sort out correlation between the same gene
-  return(out)
-})
-
-names(SL.coexpression) = goi.mut
-```
 ## SDL-parter
 
 ### SoF
