@@ -269,6 +269,38 @@ abline(col = c("blue", "red", "black", "orange"),
 # 2. Identify genes of interest
 
 ## k-means clustering of CNA and expression data
+Nur gene, welche in Expression data und CNA data vorkommen
+```{r}
+ID1 = rownames(copynumber.HNC)
+
+expression.norm.plusinCNA = expr.HNC.norm[ which(rownames(expr.HNC.norm) %in% ID1),]
+rm(ID1)
+ID2 = rownames(expression.norm.plusinCNA)
+CNA.plusinexpression = copynumber.HNC[ which(rownames(copynumber.HNC) %in% ID2),]
+rm(ID2)
+
+#Combine Expression and CNA data in one data frame for plotting and k-mean clustering 
+g = do.call(rbind, Map(data.frame, expression=expression.norm.plusinCNA, CNA=CNA.plusinexpression))
+
+#remove CNA values below 0
+g <- g[which(g$CNA >= 0),]
+
+#remove rows with missing values
+g<- g[complete.cases(g),]
+
+#Plotting of normalized expression valuess against CNA data. 
+ggplot(g, aes(x= expression, y= CNA , color = "smooth")) + geom_point()
+
+#k-mean of 
+
+kmeans(g, centers, iter.max = 10, nstart = 1)
+plot(g, data = NULL, class = NULL, size = 2,
+  legend.position = c("right", "bottom", "left", "top", "none"),
+  title = "K-Means Results", xlab = "expression",
+  ylab = "CNA")
+
+```
+
 ## Investigate high frequencies of deleterious mutations
 ```{r}
 mutation.HNC.del = lapply(1:length(ID), function(a) {
