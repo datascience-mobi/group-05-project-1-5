@@ -118,10 +118,9 @@ rm(expression.values)
 ```
 ### Plotting the 25 most under- and overexpressed genes of the first sample
 ```{r}
-expr.HNC.norm = apply(expression.HNC, 2, function(x) {
-    x - mean.exp.reference
-})
-expr.HNC.norm = as.data.frame(expr.HNC.norm)
+expr.HNC.norm = as.data.frame(apply(expression.HNC, 2, function(x) {
+    x - mean.exp.reference # normalize expression data from HNC samples
+}))
 sample1 = data.frame(Genes=rownames(expr.HNC.norm),Values=expr.HNC.norm$`ACH-000188`)
 sample1$Group<-ifelse(sample1$Values>0,"overexpressed","underexpressed")
 l = quantile(expr.HNC.norm$`ACH-000188`, probs = 0.0005)
@@ -177,22 +176,24 @@ dim(copynumber)
 For the HNC normalisation we will use the mean CN value per gen of the reference data.
 
 ```{r}
-copynumber.ref.mean = apply(copynumber.reference,1, function(x) {
-  mean(x)
-})
+copynumber.ref.mean = apply(copynumber.reference,1, mean)
 
-copynumber.HNC.mean = apply(copynumber.HNC ,1, function(x) {
-  mean(x)
-})
+copynumber.HNC.mean = apply(copynumber.HNC ,1, mean)
 
 ```
 
-Creating a matrix of copynumber values. The values are normaliezed to the mean copynumbers of the reference data. For further analysing the matrix is ordered in a decreasing manner.
+Creating a matrix of HNC copynumber values. The values are normalized to the mean copynumbers of the reference data. For further analysing the matrix is ordered in a decreasing manner.
 ```{r}
 copynumber.HNC.norm = copynumber.HNC.mean - copynumber.ref.mean
 copynumber.HNC.norm = copynumber.HNC.norm[order(copynumber.HNC.norm, decreasing = TRUE )]
 copynumber.HNC.norm = as.data.frame(copynumber.HNC.norm)
 copynumber.HNC.norm$genes = row.names(copynumber.HNC.norm)
+```
+Creating a dataframe of all copynumber values. The values are normalized to the mean copynumbers of the reference data.
+```{r}
+cna.HNC.norm = as.data.frame(apply(copynumber.HNC, 2, function(x) {
+  x - copynumber.ref.mean
+}))
 ```
 
 Plotting genes with the highest and lowest copynumbers.
@@ -348,7 +349,6 @@ goi.lit
 
 goi.mut = rownames(heatmap.data)[1:5] # choose the 5 gene with most frequent deleterious mutation
 ```
-
 
 # 3. Find SL/SDL partner
 
