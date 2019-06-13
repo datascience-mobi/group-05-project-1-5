@@ -13,6 +13,9 @@ theme_set(theme_pubr())
 library(png)
 root.dir = dirname(rstudioapi::getSourceEditorContext()$path)
 '%!in%' <- function(x,y)!('%in%'(x,y))
+library(tidyverse)  # data manipulation
+library(cluster)    # clustering algorithms
+library(factoextra) # clustering algorithms & visualization
 ```
 
 # General Introduction
@@ -273,33 +276,42 @@ abline(col = c("blue", "red", "black", "orange"),
 Nur gene, welche in Expression data und CNA data vorkommen
 ```{r}
 ID1 = rownames(copynumber.HNC)
-
 expression.norm.plusinCNA = expr.HNC.norm[ which(rownames(expr.HNC.norm) %in% ID1),]
 rm(ID1)
+
 ID2 = rownames(expression.norm.plusinCNA)
-CNA.plusinexpression = copynumber.HNC[ which(rownames(copynumber.HNC) %in% ID2),]
+CNA.norm.plusinexpression = cna.HNC.norm[ which(rownames(cna.HNC.norm) %in% ID2),]
 rm(ID2)
 
 #Combine Expression and CNA data in one data frame for plotting and k-mean clustering 
-g = do.call(rbind, Map(data.frame, expression=expression.norm.plusinCNA, CNA=CNA.plusinexpression))
+g = do.call(rbind, Map(data.frame, expression=expression.norm.plusinCNA, CNA=CNA.norm.plusinexpression))
 
 #remove CNA values below 0
 g <- g[which(g$CNA >= 0),]
-
+g <- g[which(g$expression >=0),]
 #remove rows with missing values
 g<- g[complete.cases(g),]
 
 #Plotting of normalized expression valuess against CNA data. 
 ggplot(g, aes(x= expression, y= CNA , color = "smooth")) + geom_point()
 
-#k-mean of 
+#k-mean of expression and CNA data
 
-kmeans(g, centers, iter.max = 10, nstart = 1)
-plot(g, data = NULL, class = NULL, size = 2,
-  legend.position = c("right", "bottom", "left", "top", "none"),
-  title = "K-Means Results", xlab = "expression",
-  ylab = "CNA")
 
+#Versuch 3
+m=as.matrix(cbind(g$expression, g$CNA),ncol=2)
+
+cl=(kmeans(m,2,iter.max = 10, nstart = 1))
+
+g$cluster=factor(cl$cluster)
+centers=as.data.frame(cl$centers)
+
+ggplot(data=g, aes(x=expression, y=CNA, color=cluster )) + 
+  geom_point() + 
+  geom_point(data=centers, aes(x=V1,y=V2, color="Center")) +
+  geom_point(data=centers, aes(x=V1,y=V2, color="Center"), size=12, alpha=.3, legend=FALSE)
+
+rm(cl,m, centers)
 ```
 
 ## Investigate high frequencies of deleterious mutations
