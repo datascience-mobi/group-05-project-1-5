@@ -190,7 +190,6 @@ For the HNC normalisation we will use the mean CN value per gen of the reference
 copynumber.ref.mean = apply(copynumber.reference,1, mean)
 
 copynumber.HNC.mean = apply(copynumber.HNC ,1, mean)
-
 ```
 
 Creating a matrix of HNC copynumber values. The values are normalized to the mean copynumbers of the reference data. For further analysing the matrix is ordered in a decreasing manner.
@@ -209,11 +208,8 @@ cna.HNC.norm = as.data.frame(apply(copynumber.HNC, 2, function(x) {
 
 Plotting genes with the highest and lowest copynumbers.
 ```{r}
-
 copynumber.HNC.norm$Group <- ifelse(copynumber.HNC.norm$copynumber.HNC.norm > 0,"high CN","low CN")
 ggplot(copynumber.HNC.norm[c(1:20,23172:23192),],aes(x=genes,y=copynumber.HNC.norm,fill=Group))+geom_bar(stat="identity")+coord_flip()
-
-
 ```
 ### Cleanup of the environment
 ```{r}
@@ -226,8 +222,7 @@ rm(NA.rows, NA.rows.ref, copynumber.HNC.norm)
 
 Melt all mutation matrices together and find most often mutated genes over all samples
 ```{r}
-
-all_mutations = do.call(rbind, allDepMapData$mutation)
+all_mutations = do.call(rbind,mutation)
 all_mutated_genes = table(all_mutations$Hugo_Symbol)
 all_mutated_genes_df = as.data.frame(all_mutated_genes)
 ID_all_highest_frequencies = head(order(all_mutated_genes_df[["Freq"]], decreasing = TRUE), 30)
@@ -237,12 +232,10 @@ all_mutated_genes_df_highest_30_ordered = all_mutated_genes_df_highest_30[ID_all
 rownames(all_mutated_genes_df_highest_30_ordered) = 1:30
 colnames_ordered = c("Gene", "Freq")
 colnames(all_mutated_genes_df_highest_30_ordered) = colnames_ordered
-
 ```
 
 Melt only HNC sample mutation matrices together and find most often mutated genes 
 ```{r}
-
 HNC_mutations = do.call(rbind, mutation.HNC)
 HNC_mutated_genes = table(HNC_mutations$Hugo_Symbol)
 HNC_mutated_genes_df = as.data.frame(HNC_mutated_genes)
@@ -250,34 +243,20 @@ ID_HNC_highest_frequencies = head(order(HNC_mutated_genes_df[["Freq"]], decreasi
 HNC_mutated_genes_df_highest_ordered = HNC_mutated_genes_df[ID_HNC_highest_frequencies, ]
 rownames(HNC_mutated_genes_df_highest_ordered) = 1:27
 colnames(HNC_mutated_genes_df_highest_ordered) = colnames_ordered
-
 ```
 
 ### Plotting mutation frequencies of all samples and of HNC samples
-```{r}
-library(ggplot2)
-```
 
 Plot mutations in all samples
 ```{r}
-
-all_mut_plot = ggplot(data = all_mutated_genes_df_highest_30_ordered, aes(x=Gene, y=Freq))  
-  +     geom_bar(stat = "identity", width = 0.5, fill="steelblue") 
-  +     geom_text(aes(label=Freq), vjust=-0.3, size=3.5)  
-  +     theme_minimal()
+all_mut_plot = ggplot(data = all_mutated_genes_df_highest_30_ordered, aes(x=Gene, y=Freq)) + geom_bar(stat = "identity", width = 0.5, fill="steelblue") +  geom_text(aes(label=Freq), vjust=-0.3, size=3.5) + theme_minimal()
 all_mut_plot
-
 ```
 
 Plot mutations in HNC samples
 ```{r}
-
-HNC_mut_plot = ggplot(data = HNC_mutated_genes_df_highest_ordered, aes(x=Gene, y=Freq)) 
-  +     geom_bar(stat = "identity", width = 0.5, fill="steelblue") 
-  +     geom_text(aes(label=Freq), vjust=-0.3, size=3.5) 
-  +     theme_minimal()
+HNC_mut_plot = ggplot(data = HNC_mutated_genes_df_highest_ordered, aes(x=Gene, y=Freq)) + geom_bar(stat = "identity", width = 0.5, fill="steelblue") + geom_text(aes(label=Freq), vjust=-0.3, size=3.5) + theme_minimal()
 HNC_mut_plot
-
 ```
 
 ## Knockdown
