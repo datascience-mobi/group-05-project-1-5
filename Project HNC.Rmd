@@ -559,7 +559,7 @@ p.value = lapply(1:nrow(expression), function(a){  # creation of a list with the
 })
   out = data.frame(genes = rownames(expression), p_values = do.call(rbind, p.value)) # return a dataframe with the columns genes(HugoSymbols) and p_values (p.values)
   out = out[which(out$p_value < 0.05),] # filter for significant p.values
-  out = out[which(out$genes != goi),]   # select onl these wich are not the same gene as the goi (would be a corr of 1)
+  out = out[which(out$genes != goi),]   # select only these wich are not the same gene as the goi (would be a corr of 1)
   return(out)
 })
 names(SL.coexpression) = goi.mut
