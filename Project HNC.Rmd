@@ -16,6 +16,7 @@ root.dir = dirname(rstudioapi::getSourceEditorContext()$path)
 library(tidyverse)  # data manipulation
 library(cluster)    # clustering algorithms
 library(factoextra) # clustering algorithms & visualization
+library(rstudioapi)
 ```
 
 # General Introduction
@@ -65,13 +66,16 @@ mutation.HNC = mutation[ID]
 sum(is.na(expression) == TRUE)
 ```
 
-### Comparing mean gene expression of all samples with just HNC samples
+### Examine expression values
+
+Comparing mean gene expression of all samples with just HNC samples.
 ```{r}
 expression.reference = expression[ , -which(colnames(expression) %in% ID)]
 mean.exp.reference = apply(expression.reference, 1, mean)
 mean.exp.HNC = apply(expression.HNC, 1, mean)
-
-# Checking if expression is normally distributed
+```
+Checking if expression is normally distributed
+```{r}
 HNC = data.frame(expression_values = mean.exp.HNC, sample = "HNC")
 reference = data.frame(expression_values = mean.exp.reference, sample = "reference")
 mean.expression = rbind(reference, HNC)
@@ -84,28 +88,29 @@ ggqqplot(mean.expression, x = "expression_values",
 rm(HNC, reference, mean.expression)
 ```
 Result: Gene espression is not normally distributed.
+
+Applying Wilcoxon rank sum test because expression is not normally distributed
 ```{r}
-# Applying Wilcoxon rank sum test because expression is not normally distributed
 wilcox.test(mean.exp.HNC, mean.exp.reference)
 ```
 Result: Mean gene expression differs between HNC samples and all samples significantly.
 
-### Comparing mean TP53 gene expression of all samples with and without deleterious TP53 mutation
+Comparing mean TP53 gene expression of all samples with and without deleterious TP53 mutation
 ```{r}
 mutation.df = do.call(rbind, mutation)
 TP53.mut.ID = mutation.df[which(mutation.df$Hugo_Symbol == "TP53" & mutation.df$isDeleterious == TRUE), ]$DepMap_ID
 TP53.norm.ID = annotation$DepMap_ID[-which(annotation$DepMap_ID %in% TP53.mut.ID)]
 exp.TP53.mut = as.numeric(expression["TP53", TP53.mut.ID])
 exp.TP53.norm = as.numeric(expression["TP53", TP53.norm.ID])
-
-# Applying Wilcoxon rank sum test because expression is not normally distributed
+```
+Applying Wilcoxon rank sum test because expression is not normally distributed
+```{r}
 wilcox.test(exp.TP53.mut , exp.TP53.norm)
-
 rm(TP53.mut.ID, TP53.norm.ID, exp.TP53.mut, exp.TP53.norm)
 ```
 Result: Gene expression of varies significantly whether the samples has or has no a deleterious TP53 mutation.
 
-### Checking how the expression values are distributed
+Checking how the expression values are distributed
 ```{r}
 expression.values = data.frame(expression_value = mean.exp.HNC)
 # density plot
@@ -116,21 +121,24 @@ ggdensity(expression.values, x = "expression_value", xlab = "expression value",
 gghistogram(expression.values, x = "expression_value", xlab = "expression value", bins = 60,
             fill = "#0073C2FF", color = "#0073C2FF",
             add = "mean", rug = TRUE)
-
 rm(expression.values)
+```
+### Normalize expression data from HNC samples
+```{r}
+expr.HNC.norm = as.data.frame(apply(expression.HNC, 2, function(x) {
+  x - mean.exp.reference
+}))
 ```
 ### Plotting the 25 most under- and overexpressed genes of the first sample
 ```{r}
-expr.HNC.norm = as.data.frame(apply(expression.HNC, 2, function(x) {
-    x - mean.exp.reference # normalize expression data from HNC samples
-}))
-sample1 = data.frame(Genes=rownames(expr.HNC.norm),Values=expr.HNC.norm$`ACH-000188`)
-sample1$Group<-ifelse(sample1$Values>0,"overexpressed","underexpressed")
-l = quantile(expr.HNC.norm$`ACH-000188`, probs = 0.0005)
-h = quantile(expr.HNC.norm$`ACH-000188`, probs = 0,9995)
-sample1 = sample1[which(sample1$Values < l | sample1$Values > h),]
-ggplot(sample1,aes(x=Genes,y=Values,fill=Group))+geom_bar(stat="identity")+coord_flip()
-rm(sample1, l, h)
+mean.expr.HNC.norm = as.data.frame(apply(expr.HNC.norm, 1, mean))
+barplot.data = data.frame(Genes=rownames(expr.HNC.norm),Values=mean.expr.HNC.norm)
+names(barplot.data) = c("Genes", "Values")
+barplot.data$Group<-ifelse(barplot.data$Values>0,"overexpressed","underexpressed")
+barplot.data = barplot.data[order(barplot.data$Values),]
+barplot.data = barplot.data[c(1:24, (nrow(barplot.data)-25):nrow(barplot.data)),]
+ggplot(barplot.data,aes(x=Genes,y=Values,fill=Group))+geom_bar(stat="identity")+coord_flip()
+rm(mean.expr.HNC.norm, barplot.data)
 ```
 
 ## Copynumber Alteration
@@ -182,7 +190,6 @@ For the HNC normalisation we will use the mean CN value per gen of the reference
 copynumber.ref.mean = apply(copynumber.reference,1, mean)
 
 copynumber.HNC.mean = apply(copynumber.HNC ,1, mean)
-
 ```
 
 Creating a matrix of HNC copynumber values. The values are normalized to the mean copynumbers of the reference data. For further analysing the matrix is ordered in a decreasing manner.
@@ -201,19 +208,57 @@ cna.HNC.norm = as.data.frame(apply(copynumber.HNC, 2, function(x) {
 
 Plotting genes with the highest and lowest copynumbers.
 ```{r}
-
 copynumber.HNC.norm$Group <- ifelse(copynumber.HNC.norm$copynumber.HNC.norm > 0,"high CN","low CN")
 ggplot(copynumber.HNC.norm[c(1:20,23172:23192),],aes(x=genes,y=copynumber.HNC.norm,fill=Group))+geom_bar(stat="identity")+coord_flip()
-
-
 ```
 ### Cleanup of the environment
 ```{r}
-rm(NA.rows)
-rm(NA.rows.ref)
+rm(NA.rows, NA.rows.ref, copynumber.HNC.norm)
 ```
 
 ## Mutation
+
+### Find Mutations with the highest frequencies
+
+Melt all mutation matrices together and find most often mutated genes over all samples
+```{r}
+all_mutations = do.call(rbind,mutation)
+all_mutated_genes = table(all_mutations$Hugo_Symbol)
+all_mutated_genes_df = as.data.frame(all_mutated_genes)
+ID_all_highest_frequencies = head(order(all_mutated_genes_df[["Freq"]], decreasing = TRUE), 30)
+all_mutated_genes_df_highest_30 = all_mutated_genes_df[which(rownames(all_mutated_genes_df) %in% ID_all_highest_frequencies), ]
+ID_all_highest_30_frequencies = order(all_mutated_genes_df_highest_30["Freq"], decreasing = TRUE) 
+all_mutated_genes_df_highest_30_ordered = all_mutated_genes_df_highest_30[ID_all_highest_30_frequencies, ]
+rownames(all_mutated_genes_df_highest_30_ordered) = 1:30
+colnames_ordered = c("Gene", "Freq")
+colnames(all_mutated_genes_df_highest_30_ordered) = colnames_ordered
+```
+
+Melt only HNC sample mutation matrices together and find most often mutated genes 
+```{r}
+HNC_mutations = do.call(rbind, mutation.HNC)
+HNC_mutated_genes = table(HNC_mutations$Hugo_Symbol)
+HNC_mutated_genes_df = as.data.frame(HNC_mutated_genes)
+ID_HNC_highest_frequencies = head(order(HNC_mutated_genes_df[["Freq"]], decreasing = TRUE), 27)  
+HNC_mutated_genes_df_highest_ordered = HNC_mutated_genes_df[ID_HNC_highest_frequencies, ]
+rownames(HNC_mutated_genes_df_highest_ordered) = 1:27
+colnames(HNC_mutated_genes_df_highest_ordered) = colnames_ordered
+```
+
+### Plotting mutation frequencies of all samples and of HNC samples
+
+Plot mutations in all samples
+```{r}
+all_mut_plot = ggplot(data = all_mutated_genes_df_highest_30_ordered, aes(x=Gene, y=Freq)) + geom_bar(stat = "identity", width = 0.5, fill="steelblue") +  geom_text(aes(label=Freq), vjust=-0.3, size=3.5) + theme_minimal()
+all_mut_plot
+```
+
+Plot mutations in HNC samples
+```{r}
+HNC_mut_plot = ggplot(data = HNC_mutated_genes_df_highest_ordered, aes(x=Gene, y=Freq)) + geom_bar(stat = "identity", width = 0.5, fill="steelblue") + geom_text(aes(label=Freq), vjust=-0.3, size=3.5) + theme_minimal()
+HNC_mut_plot
+```
+
 ## Knockdown
 
 ### Checking fo NAs and range in HNC patients
@@ -267,14 +312,17 @@ summary(esgeneT$EGFR)
 boxplot(esgeneT[810:830], xlab = "gene", horizontal = F)
 abline(col = c("blue", "red", "black", "orange"),
     lty = 2)
+
+rm(esgene1, esgeneT)
 ```
 
 
 # 2. Identify genes of interest
 
-## k-means clustering of CNA and expression data
-Nur gene, welche in Expression data und CNA data vorkommen
+## k-means clustering of CNA and expression data with normalized values(-reference)
+
 ```{r}
+#Remove values, that are either in expression data or CNA data
 ID1 = rownames(copynumber.HNC)
 expression.norm.plusinCNA = expr.HNC.norm[ which(rownames(expr.HNC.norm) %in% ID1),]
 rm(ID1)
@@ -284,35 +332,114 @@ CNA.norm.plusinexpression = cna.HNC.norm[ which(rownames(cna.HNC.norm) %in% ID2)
 rm(ID2)
 
 #Combine Expression and CNA data in one data frame for plotting and k-mean clustering 
-g = do.call(rbind, Map(data.frame, expression=expression.norm.plusinCNA, CNA=CNA.norm.plusinexpression))
+comb.ex.cna = do.call(rbind, Map(data.frame, expression=expression.norm.plusinCNA, CNA=CNA.norm.plusinexpression))
 
-#remove CNA values below 0
-g <- g[which(g$CNA >= 0),]
-g <- g[which(g$expression >=0),]
+#remove CNA and expression values below 0
+comb.ex.cna <- comb.ex.cna[which(comb.ex.cna$CNA >= 2),]
+comb.ex.cna <- comb.ex.cna[which(comb.ex.cna$expression >=0),]
 #remove rows with missing values
-g<- g[complete.cases(g),]
+comb.ex.cna<- comb.ex.cna[complete.cases(comb.ex.cna),]
 
 #Plotting of normalized expression valuess against CNA data. 
-ggplot(g, aes(x= expression, y= CNA , color = "smooth")) + geom_point()
+ggplot(comb.ex.cna, aes(x= expression, y= CNA , color = "smooth")) + geom_point()
+
+#ellbow method to find optimal ammount of clusters
+emp = vector() #create an empty vector to save the summ-of weights scores
+for (i in 1:10) emp[i] = sum(kmeans(comb.ex.cna, i)$withinss) #calculate the sum within squared values for 10 clusters
+emp #look at the sum within squares for 10 clusters 
+
+plot(1:10,
+     emp,
+     type = 'b',
+     main = paste('The Elbow Method'),
+     xlab = 'Number of clusters',
+     ylab = 'EMP') 
+# shows 3 clusters are sufficient
 
 #k-mean of expression and CNA data
-
-
-#Versuch 3
-m=as.matrix(cbind(g$expression, g$CNA),ncol=2)
-
-cl=(kmeans(m,2,iter.max = 10, nstart = 1))
-
-g$cluster=factor(cl$cluster)
+m=as.matrix(cbind(comb.ex.cna$expression, comb.ex.cna$CNA),ncol=2)
+cl=(kmeans(m,3,iter.max = 10, nstart = 1))
+comb.ex.cna$cluster=factor(cl$cluster)
 centers=as.data.frame(cl$centers)
 
-ggplot(data=g, aes(x=expression, y=CNA, color=cluster )) + 
+ggplot(data=comb.ex.cna, aes(x=expression, y=CNA, color=cluster )) + 
   geom_point() + 
   geom_point(data=centers, aes(x=V1,y=V2, color="Center")) +
   geom_point(data=centers, aes(x=V1,y=V2, color="Center"), size=12, alpha=.3, legend=FALSE)
 
 rm(cl,m, centers)
+
+# Fitting K-Means to the dataset
+set.seed(2000) #set random variables
+kmeans = kmeans(x = comb.ex.cna, centers = 3) #see elbow method (k = 5) and apply kMeans clustering onto the dataset of the customers
+y_kmeans = kmeans$cluster #the consumers get put into a specific cluster; extract this information 
+y_kmeans #look at the clusters for all the consumers
+
+# Visualising the clusters
+clusplot(comb.ex.cna,
+         y_kmeans,
+         lines = 0,
+         shade = TRUE,
+         color = TRUE,
+         labels = 6,
+         plotchar = FALSE,
+         span = TRUE,
+         main = paste('Clusters of Genes'),
+         xlab = 'Expression',
+         ylab = 'CNA')
+
+#Visualisation of clusters 2
+mtx = pam(comb.ex.cna,3)
+fviz_cluster(mtx,
+             lables =1,
+             stand = TRUE,
+             ellipse = TRUE,
+             ellipse.type = "convex",
+              shape = NULL,
+             pointsize = 1.5,
+             labelsize = 1,
+             main = "Clusters of genes",
+             xlab = "expression",
+             ylab = "CNA")
+rm(mtx)
+             
 ```
+## k-means with of expression number and CNA data in relation to reference samples (/reference)
+```{r}
+#Definition of related expression values
+expr.HNC.rel = as.data.frame(apply(expression.HNC, 2, function(x) {
+    x / mean.exp.reference
+}))
+#Definition of related CNA values
+CNA.HNC.rel = as.data.frame(apply(copynumber.HNC, 2, function(x) {
+              x / copynumber.ref.mean
+              }))
+
+
+#Remove values, that are either in expression data or CNA data
+ID1 = rownames(copynumber.HNC)
+expression.rel.plusinCNA = expr.HNC.rel[ which(rownames(expr.HNC.rel) %in% ID1),]
+rm(ID1)
+
+ID2 = rownames(expression.norm.plusinCNA)
+CNA.rel.plusinexpression = CNA.HNC.rel[ which(rownames(CNA.HNC.rel) %in% ID2),]
+rm(ID2)
+
+#Combine Expression and CNA data in one data frame for plotting and k-mean clustering 
+comb.rel.ex.cna = do.call(rbind, Map(data.frame, expression=expression.rel.plusinCNA, CNA=CNA.rel.plusinexpression))
+
+#remove CNA and expression values below 0
+comb.rel.ex.cna <- comb.rel.ex.cna[which(comb.rel.ex.cna$CNA >= 0),]
+comb.rel.ex.cna <- comb.rel.ex.cna[which(comb.rel.ex.cna$expression >=0),]
+comb.rel.ex.cna <- comb.rel.ex.cna[which(comb.rel.ex.cna$CNA <= 20),]
+comb.rel.ex.cna <- comb.rel.ex.cna[which(comb.rel.ex.cna$expression <=20),]
+#remove rows with missing values
+comb.rel.ex.cna<- comb.rel.ex.cna[complete.cases(comb.rel.ex.cna),]
+
+#Plotting of normalized expression valuess against CNA data. 
+ggplot(comb.rel.ex.cna, aes(x= expression, y= CNA , color = "smooth")) + geom_point()
+```
+result of related values: not necessary --> no advantage against normalized values
 
 ## Investigate high frequencies of deleterious mutations
 ```{r}
