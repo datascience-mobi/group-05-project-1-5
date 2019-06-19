@@ -515,8 +515,28 @@ Define function for Wilcoxon sum rank test following the daisy model. (Bonferron
   out = data.frame(genes = rownames(input_data), p_value = do.call(rbind, p.value))
   out = out[which(out$p_value < 0.05),]
   return(out)
-  })}
+  })
+}
 ```
+Define function for Spearman correlation test following the daisy model.
+```{r}
+'Daisy.Spearman' <- function(input_genes,input_data){
+  # hier kannst du noch deine Funktion einfügen Tobi
+}
+```
+Define function to converge SL/SDL sets.
+```{r}
+'partner' <- function(genes_input, SoF, functional.examination, coexpression){
+  lapply(1:length(genes_input), function(a) {
+    dat_picker.SoF = SoF[[a]]
+    dat_picker.functional_examination = functional.examination[[a]]
+    dat_picker.coexpression = coexpression[[a]]
+    out = Reduce(intersect, list(dat_picker.SoF$genes, dat_picker.functional_examination$genes, dat_picker.coexpression$genes))
+    return(out)
+  })
+}
+```
+
 ## SL-parter
 ### SoF
 ```{r}
@@ -564,8 +584,22 @@ SDL.functional.examination = Daisy.Wilcox(goi.SDL, kd.ceres)
 names(SDL.functional.examination) = goi.SDL
 ```
 ### Gene coexpression
-
+```{r}
+SDL.coexpression = Daisy.Spearman(goi.SDL, expression)
+names(SDL.coexpression) = goi.SDL
+```
 ## Converging the different SL and SDL sets
+for SL
+```{r}
+SL.partner = partner(goi.SL, SL.SoF, SL.functional.examination, SL.coexpression)
+names(SL.partner) = goi.SL
+```
+and for SDL
+```{r}
+SDL.partner = partner(goi.SDL, SDL.SoF, SDL.functional.examination, SDL.coexpression)
+names(SDL.partner) = goi.SDL
+```
+
 
 # 4. Mutation prediction via logistical regression
 ## Prepare data for regression model
