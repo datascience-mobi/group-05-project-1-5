@@ -576,7 +576,36 @@ The returned list, contains the five genes of interest as elements each containi
 ## Converging the different SL and SDL sets
 
 # 4. Mutation prediction via logistical regression
+## Prepare data for regression model
+Reduce all genes to them of which we have expression, copynumber and knockdown data.
+```{r}
+regression.genes = Reduce(intersect, list(rownames(expression), rownames(copynumber), rownames(kd.ceres)))
 
-## Examine correlation between variables
+regression.expression = expression[regression.genes,]
+regression.copynumber = copynumber[regression.genes,]
+regression.kd.ceres = kd.ceres[regression.genes,]
+regression.mutation = lapply(1:length(mutation), function(a) {
+  out = mutation[[a]][which(mutation[[a]]$isDeleterious == TRUE),]
+  return(out)
+})
+names(regression.mutation) = names(mutation)
+```
+Create a dataframe with expression, copynumber, knockdown and mutation data from all samples one after another.
+```{r}
+regression.data = lapply(1:length(regression.genes), function(a) {
+  rg.expr = t(regression.expression[a,])
+  rg.cna = t(regression.copynumber[a,])
+  rg.kd = t(regression.kd.ceres[a,])
+  rg.mut = lapply(1:length(regression.mutation), function(m) {
+    out = ifelse(regression.genes[a] %in% regression.mutation[[m]]$Hugo_Symbol, TRUE, FALSE)
+    return(out)
+  })
+  rg.mut = do.call(rbind, rg.mut)
+  out = data.frame("genes" = regression.genes[a], "expression" = rg.expr, "copynumber" = rg.cna, "kockdown" = rg.kd, "mutation" = rg.mut)
+  colnames(out) = c("genes", "expression", "copynumber", "kockdown", "mutation")
+  return(out)
+})
+regression.data = do.call(rbind, regression.data)
+```
 ## train regression model
 ## test regression model and compare different variable input
