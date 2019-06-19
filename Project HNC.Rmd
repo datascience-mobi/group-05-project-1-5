@@ -531,10 +531,17 @@ Define function to converge SL/SDL sets.
     dat_picker.SoF = SoF[[a]]
     dat_picker.functional_examination = functional.examination[[a]]
     dat_picker.coexpression = coexpression[[a]]
-    out = Reduce(intersect, list(dat_picker.SoF$genes, dat_picker.functional_examination$genes, dat_picker.coexpression$genes))
+    partnergenes = Reduce(intersect, list(dat_picker.SoF$genes, dat_picker.functional_examination$genes, dat_picker.coexpression$genes))
+    out = data.frame(genes = partnergenes, SoF = dat_picker.SoF[which(SL.SoF[[a]]$genes %in% partnergenes),"p_value"], functional_examination = dat_picker.functional_examination[which(SL.functional.examination[[a]]$genes %in% partnergenes),"p_value"], coexpression = dat_picker.coexpression[which(SL.coexpression[[a]]$genes %in% partnergenes),"p_value"])
     return(out)
   })
 }
+```
+Define function to reduce SL/SDL partner to the most significants
+```{r}
+'reduce.partner' <- function(list, element_of_list, treshhold){
+  list[[element_of_list]][which(list[[element_of_list]]$SoF < treshhold*max(list[[element_of_list]]$SoF) & list[[element_of_list]]$functional_examination < treshhold*max(list[[element_of_list]]$functional_examination) & list[[element_of_list]]$coexpression < treshhold*max(list[[element_of_list]]$coexpression)),]
+}  
 ```
 
 ## SL-parter
@@ -593,7 +600,16 @@ for SL
 ```{r}
 SL.partner = partner(goi.SL, SL.SoF, SL.functional.examination, SL.coexpression)
 names(SL.partner) = goi.SL
+lapply(1:length(SL.partner), function(a){nrow(SL.partner[[a]])})
 ```
+```{r}
+SL.partner[[1]] = reduce.partner(SL.partner, 1, 0.1)
+SL.partner[[2]] = reduce.partner(SL.partner, 2, 0.8)
+SL.partner[[3]] = reduce.partner(SL.partner, 3, 0.8)
+SL.partner[[5]] = reduce.partner(SL.partner, 5, 0.6)
+lapply(1:length(SL.partner), function(a){nrow(SL.partner[[a]])})
+```
+
 and for SDL
 ```{r}
 SDL.partner = partner(goi.SDL, SDL.SoF, SDL.functional.examination, SDL.coexpression)
