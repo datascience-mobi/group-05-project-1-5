@@ -486,16 +486,16 @@ rm(heatmap_position)
 goi.lit = goi.lit[order(goi.lit$Heatmap_position),]
 goi.lit
 
-goi.mut = rownames(heatmap.data)[1:5] # choose the 5 gene with most frequent deleterious mutation
+goi.SL = rownames(heatmap.data)[1:5] # choose the 5 gene with most frequent deleterious mutation
 ```
 
 # 3. Find SL/SDL partner
-
-## SL-parter (Bonferroni correction needs to be added)
-### SoF
+## Define functions for SL/SDL partner search
+Define function for Wilcoxon sum rank test following the daisy model. (Bonferroni correction needs to be added)
 ```{r}
-SL.SoF = lapply(1:length(goi.mut), function(m) {
-  goi = goi.mut[m] # set 1 of 5 goi
+'Daisy.Wilcox' <- function(input_genes,input_data){
+  lapply(1:length(input_genes), function(m) {
+  goi = input_genes[m] # set 1 of 5 goi
 
   mutated.ID = lapply(1:length(mutation), function(a) {
     out = ifelse(goi %in% mutation[[a]]$Hugo_Symbol, a, NA) # filter all IDs which have a mutation of goi
@@ -506,42 +506,26 @@ SL.SoF = lapply(1:length(goi.mut), function(m) {
   mutated.ID = mutated.ID[is.na(mutated.ID) == FALSE] # ID of samples with goi mutation
   mutated.ID = as.integer(mutated.ID)
 
-  p.value = lapply(1:nrow(copynumber), function(b) {
-    mutated.cna = t(copynumber[b, mutated.ID])
-    not_mutated.cna = t(copynumber[b, not_mutated.ID])
+  p.value = lapply(1:nrow(input_data), function(b) {
+    mutated.cna = t(input_data[b, mutated.ID])
+    not_mutated.cna = t(input_data[b, not_mutated.ID])
     p = wilcox.test(mutated.cna, not_mutated.cna, alternative = "greater")$p.value # one sided (greater) Wilcoxon Sum Rank Test 
   })
 
-  out = data.frame(genes = rownames(copynumber), p_value = do.call(rbind, p.value))
+  out = data.frame(genes = rownames(input_data), p_value = do.call(rbind, p.value))
   out = out[which(out$p_value < 0.05),]
   return(out)
-})
+  })}
+```
+## SL-parter
+### SoF
+```{r}
+SL.SoF = Daisy.Wilcox(goi.mut, copynumber)
 names(SL.SoF) = goi.mut
 ```
 ### Functional examination
 ```{r}
-SL.functional.examination = lapply(1:length(goi.mut), function(m) {
-  goi = goi.mut[m] # set 1 of 5 goi
-
-  mutated.ID = lapply(1:length(mutation), function(a) {
-    out = ifelse(goi %in% mutation[[a]]$Hugo_Symbol, a, NA) # filter all IDs which have a mutation of goi
-    return(out)
-  })
-
-  not_mutated.ID = grep("NA", mutated.ID, value = FALSE) # ID of samples with no goi mutation
-  mutated.ID = mutated.ID[is.na(mutated.ID) == FALSE] # ID of samples with goi mutation
-  mutated.ID = as.integer(mutated.ID)
-
-  p.value = lapply(1:nrow(kd.ceres), function(b) {
-    mutated.kd = t(kd.ceres[b, mutated.ID])
-    not_mutated.kd = t(kd.ceres[b, not_mutated.ID])
-    p = wilcox.test(mutated.kd, not_mutated.kd, alternative = "less")$p.value # one sided (less) Wilcoxon Sum Rank Test 
-  })
-
-  out = data.frame(genes = rownames(kd.ceres), p_value = do.call(rbind, p.value))
-  out = out[which(out$p_value < 0.05),]
-  return(out)
-})
+SL.functional.examination = Daisy.Wilcox(goi.mut, kd.ceres)
 names(SL.functional.examination) = goi.mut
 ```
 ### Gene coexpression
@@ -570,7 +554,15 @@ The returned list, contains the five genes of interest as elements each containi
 
 ## SDL-parter
 ### SoF
+```{r}
+SDL.SoF = Daisy.Wilcox(goi.SDL, copynumber)
+names(SDL.SoF) = goi.SDL
+```
 ### Functional examination
+```{r}
+SDL.functional.examination = Daisy.Wilcox(goi.SDL, kd.ceres)
+names(SDL.functional.examination) = goi.SDL
+```
 ### Gene coexpression
 
 ## Converging the different SL and SDL sets
