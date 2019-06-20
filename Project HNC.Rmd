@@ -343,7 +343,7 @@ km.data = lapply(1:length(ID), function(x) {
 })
 
 comb.ex.cna = do.call(rbind, km.data)
-comb.ex.cna <- comb.ex.cna[which(comb.ex.cna$copynumber >= 2 & comb.ex.cna$expression >=0),]
+comb.ex.cna <- comb.ex.cna[which(comb.ex.cna$copynumber >= 1 & comb.ex.cna$expression >=quantile(comb.ex.cna$expression,0.95)),]
 
 #Plotting of normalized expression valuess against CNA data. 
 ggplot(comb.ex.cna[,2:3], aes(x= expression, y= copynumber , color = "smooth")) + geom_point()
@@ -362,9 +362,8 @@ plot(1:10,
 # shows 3 clusters are sufficient
 
 # Fitting K-Means to the dataset
-kmeans = kmeans(x = comb.ex.cna[,2:3], centers = 3,iter.max = 100, nstart = 1) #see elbow method (k = 5) and apply kMeans clustering onto the dataset of the customers
+kmeans = kmeans(x = comb.ex.cna[,2:3], centers = 3,iter.max = 1000, nstart = 1) #see elbow method (k = 5) and apply kMeans clustering onto the dataset of the customers
 y_kmeans = kmeans$cluster #the consumers get put into a specific cluster; extract this information 
-y_kmeans #look at the clusters for all the consumers
 
 # Visualising the clusters
 clusplot(comb.ex.cna,
@@ -379,7 +378,13 @@ clusplot(comb.ex.cna,
          xlab = 'Expression',
          ylab = 'CNA')
 
-             
+comb.ex.cna = cbind(comb.ex.cna, y_kmeans)#combine kmeans with genes
+#Filtering of the most expressed and alterated
+goi.sdl = comb.ex.cna[which(comb.ex.cna$y_kmeans == 3),]
+
+#sort matrix 
+goi.sdl = goi.sdl[order(goi.sdl$expression,decreasing=TRUE),] 
+head(goi.sdl)
 ```
 ## Investigate high frequencies of deleterious mutations
 ```{r}
