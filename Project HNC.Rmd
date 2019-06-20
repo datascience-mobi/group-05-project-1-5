@@ -7,16 +7,17 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+root.dir = dirname(rstudioapi::getSourceEditorContext()$path)
 library(ggplot2)
-library(ggpubr)
+library(ggpubr) # histograms
 theme_set(theme_pubr())
 library(png)
-root.dir = dirname(rstudioapi::getSourceEditorContext()$path)
-'%!in%' <- function(x,y)!('%in%'(x,y))
 library(tidyverse)  # data manipulation
 library(cluster)    # clustering algorithms
 library(factoextra) # clustering algorithms & visualization
 library(rstudioapi)
+
+'%!in%' <- function(x,y)!('%in%'(x,y)) # Define function "is not in"
 ```
 
 # General Introduction
@@ -65,12 +66,13 @@ mutation.HNC = mutation[ID]
 ```{r}
 sum(is.na(expression) == TRUE)
 ```
+There are no NAs in the expression data.
 
 ### Examine expression values
 
 Comparing mean gene expression of all samples with just HNC samples.
 ```{r}
-expression.reference = expression[ , -which(colnames(expression) %in% ID)]
+expression.reference = expression[ , which(colnames(expression) %!in% ID)]
 mean.exp.reference = apply(expression.reference, 1, mean)
 mean.exp.HNC = apply(expression.HNC, 1, mean)
 ```
@@ -97,31 +99,32 @@ Result: Mean gene expression differs between HNC samples and all samples signifi
 
 Comparing mean TP53 gene expression of all samples with and without deleterious TP53 mutation
 ```{r}
-mutation.df = do.call(rbind, mutation)
-TP53.mut.ID = mutation.df[which(mutation.df$Hugo_Symbol == "TP53" & mutation.df$isDeleterious == TRUE), ]$DepMap_ID
-TP53.norm.ID = annotation$DepMap_ID[-which(annotation$DepMap_ID %in% TP53.mut.ID)]
-exp.TP53.mut = as.numeric(expression["TP53", TP53.mut.ID])
-exp.TP53.norm = as.numeric(expression["TP53", TP53.norm.ID])
+TP53.mut.ID = lapply(1:length(mutation), function(a) {
+  dat_picker = mutation[[a]]
+  dat_picker = dat_picker[which(dat_picker$isDeleterious == TRUE),]
+  out = ifelse("TP53" %in% dat_picker$Hugo_Symbol, a, NA) # filter all IDs which have a deleterious mutation of TP53
+    return(out)
+  })
+
+TP53.not_mut.ID = grep("NA", TP53.mut.ID, value = FALSE) # ID of samples with no TP53 mutation
+TP53.mut.ID = as.integer(TP53.mut.ID[is.na(TP53.mut.ID) == FALSE]) # ID of samples with TP53 mutation
+
+exp.TP53.mut = as.numeric(expression["TP53", TP53.mut.ID]) # expression of TP53 deleterious mutated samples
+exp.TP53.not_mut = as.numeric(expression["TP53", TP53.not_mut.ID]) # expression of TP53 not deleterious mutated samples
 ```
 Applying Wilcoxon rank sum test because expression is not normally distributed
 ```{r}
-wilcox.test(exp.TP53.mut , exp.TP53.norm)
-rm(TP53.mut.ID, TP53.norm.ID, exp.TP53.mut, exp.TP53.norm)
+wilcox.test(exp.TP53.mut , exp.TP53.not_mut)
+rm(TP53.mut.ID, TP53.not_mut.ID, exp.TP53.mut, exp.TP53.not_mut)
 ```
-Result: Gene expression of varies significantly whether the samples has or has no a deleterious TP53 mutation.
+Result: Gene expression of TP53 as an example gene varies significantly whether the samples has or has no deleterious TP53 mutation.
 
 Checking how the expression values are distributed
 ```{r}
-expression.values = data.frame(expression_value = mean.exp.HNC)
-# density plot
-ggdensity(expression.values, x = "expression_value", xlab = "expression value",
-          fill = "#0073C2FF", color = "#0073C2FF",
-          add = "mean", rug = TRUE)
 # histogram
-gghistogram(expression.values, x = "expression_value", xlab = "expression value", bins = 60,
+gghistogram(as.data.frame(mean.exp.HNC), x = "mean.exp.HNC", xlab = "expression value", bins = 60,
             fill = "#0073C2FF", color = "#0073C2FF",
             add = "mean", rug = TRUE)
-rm(expression.values)
 ```
 ### Normalize expression data from HNC samples
 ```{r}
@@ -129,20 +132,24 @@ expr.HNC.norm = as.data.frame(apply(expression.HNC, 2, function(x) {
   x - mean.exp.reference
 }))
 ```
-### Plotting the 25 most under- and overexpressed genes of the first sample
+### Plotting the 20 most under- and overexpressed genes of the first sample
 ```{r}
 mean.expr.HNC.norm = as.data.frame(apply(expr.HNC.norm, 1, mean))
 barplot.data = data.frame(Genes=rownames(expr.HNC.norm),Values=mean.expr.HNC.norm)
 names(barplot.data) = c("Genes", "Values")
 barplot.data$Group<-ifelse(barplot.data$Values>0,"overexpressed","underexpressed")
 barplot.data = barplot.data[order(barplot.data$Values),]
-barplot.data = barplot.data[c(1:24, (nrow(barplot.data)-25):nrow(barplot.data)),]
-ggplot(barplot.data,aes(x=Genes,y=Values,fill=Group))+geom_bar(stat="identity")+coord_flip()
+barplot.data = barplot.data[c(1:19, (nrow(barplot.data)-20):nrow(barplot.data)),]
+ggplot(barplot.data,aes(x=Genes,y=Values,fill=Group))+geom_bar(stat="identity")+coord_flip()+theme(axis.text.y = element_text(size=6))
 rm(mean.expr.HNC.norm, barplot.data)
+```
+### Cleanup of the enviroment
+```{r}
+rm(mean.exp.HNC, mean.exp.reference, expression.reference)
 ```
 
 ## Copynumber Alteration
-### analysis of NA values
+### Analysis of NA values
 
 Examination of NA values in the copynumber.HNC data
 ```{r}
@@ -159,7 +166,7 @@ dim(copynumber.HNC)
 ```
 Creating a reference data and examination of its NA values
 ```{r}
-copynumber.reference = copynumber[,-which(colnames(copynumber) %in% ID)]
+copynumber.reference = copynumber[,which(colnames(copynumber) %!in% ID)]
 dim(copynumber.reference)
 ```
 
@@ -174,7 +181,7 @@ length(NA.rows.ref)
 ```{r}
 summary(NA.rows == NA.rows.ref)
 ```
-Gens with NA values are the same for the HNC samples compared to all the other samples. Therefore they can be deleted as well in the reference data.
+Genes with NA values are the same for the HNC samples compared to all the other samples. Therefore, they can be deleted in the reference data as well.
 
 ```{r}
 copynumber.reference = copynumber.reference[-NA.rows.ref,]
@@ -209,11 +216,11 @@ cna.HNC.norm = as.data.frame(apply(copynumber.HNC, 2, function(x) {
 Plotting genes with the highest and lowest copynumbers.
 ```{r}
 copynumber.HNC.norm$Group <- ifelse(copynumber.HNC.norm$copynumber.HNC.norm > 0,"high CN","low CN")
-ggplot(copynumber.HNC.norm[c(1:20,23172:23192),],aes(x=genes,y=copynumber.HNC.norm,fill=Group))+geom_bar(stat="identity")+coord_flip()
+ggplot(copynumber.HNC.norm[c(1:20,23172:23192),],aes(x=genes,y=copynumber.HNC.norm,fill=Group))+geom_bar(stat="identity")+coord_flip()+theme(axis.text.y = element_text(size=6))
 ```
 ### Cleanup of the environment
 ```{r}
-rm(NA.rows, NA.rows.ref, copynumber.HNC.norm)
+rm(NA.rows, NA.rows.ref, copynumber.HNC.norm, copynumber.HNC.mean, copynumber.ref.mean, copynumber.reference)
 ```
 
 ## Mutation
@@ -258,10 +265,14 @@ Plot mutations in HNC samples
 HNC_mut_plot = ggplot(data = HNC_mutated_genes_df_highest_ordered, aes(x=Gene, y=Freq)) + geom_bar(stat = "identity", width = 0.5, fill="steelblue") + geom_text(aes(label=Freq), vjust=-0.3, size=3.5) + theme_minimal()
 HNC_mut_plot
 ```
+### Cleanup of the enviroment
+```{r}
+rm(all_mutations, all_mutated_genes, all_mutated_genes_df, ID_all_highest_30_frequencies, ID_all_highest_frequencies, all_mutated_genes_df_highest_30, all_mutated_genes_df_highest_30_ordered, colnames_ordered, HNC_mutations, HNC_mutated_genes, HNC_mutated_genes_df, ID_HNC_highest_frequencies, HNC_mutated_genes_df_highest_ordered, HNC_mut_plot, all_mut_plot)
+```
 
 ## Knockdown
 
-### Checking fo NAs and range in HNC patients
+### Checking for NAs and range in HNC patients
 ```{r}
 sum(is.na(kd.ceres.HNC) == TRUE) # Range of data
 range(kd.ceres.HNC)
@@ -312,10 +323,11 @@ summary(esgeneT$EGFR)
 boxplot(esgeneT[810:830], xlab = "gene", horizontal = F)
 abline(col = c("blue", "red", "black", "orange"),
     lty = 2)
-
-rm(esgene1, esgeneT)
 ```
-
+### Cleanup of the enviroment
+```{r}
+rm(kd.ceres.HNC.dist, kd.ceres.reference, kd.ceres.reference.dist, esgene1, esgeneT)
+```
 
 # 2. Identify genes of interest
 
@@ -371,17 +383,12 @@ clusplot(comb.ex.cna,
 ```
 ## Investigate high frequencies of deleterious mutations
 ```{r}
-mutation.HNC.del = lapply(1:length(ID), function(a) {
-  out = mutation.HNC[[a]][which(mutation.HNC[[a]]$isDeleterious == TRUE),] # choose only deleterious mutations
-  return(out)
-})
-
-mutation.HNC.del.df = do.call(rbind, mutation.HNC.del) # all mutation data of HNC samples in one dataframe
-
-heatmap.genes = as.data.frame(table(mutation.HNC.del.df$Hugo_Symbol)) # dataframe with all mutated genes in HNC samples
+mutation.HNC.df = do.call(rbind, mutation.HNC) # all mutation data of HNC samples in one dataframe
+heatmap.genes = as.data.frame(table(mutation.HNC.df$Hugo_Symbol)) # dataframe with all mutated genes in HNC samples once
 
 heatmap.samples = lapply(1:(length(ID)), function(a) {
-  heatmap.genes$a = ifelse(heatmap.genes$Var1 %in% mutation.HNC[[a]]$Hugo_Symbol, 1, 0) # per HNC sample: every gene which is mutated gets a 1, otherwise a 0
+  out = ifelse(heatmap.genes$Var1 %in% mutation.HNC[[a]]$Hugo_Symbol, 1, 0) # per HNC sample: every gene which is mutated gets a 1, otherwise a 0
+  return(out)
 })
 
 # define row and column names
@@ -390,14 +397,14 @@ rownames(heatmap.data) = heatmap.genes$Var1
 colnames(heatmap.data) = ID
 
 # Order from high to low frequency
-heatmap.data$mean = apply(heatmap.data, 1, sum)
-heatmap.data = heatmap.data[order(-heatmap.data$mean), 1:27] 
+heatmap.data$sum = apply(heatmap.data, 1, sum)
+heatmap.data = heatmap.data[order(-heatmap.data$sum), 1:27] 
 
-# heatmap
-heatmap(data.matrix(heatmap.data)[1:40,], Rowv=NA, Colv=NA, col = c("lightgrey", "tomato2"), scale="column", cexRow = 0.5, cexCol = 0.8)
+# heatmap of the most frequently mutated genes in HNC samples
+heatmap(data.matrix(heatmap.data)[1:40,], Rowv=NA, Colv=NA, col = c("lightgrey", "tomato2"), scale="column", cexRow = 0.5, cexCol = 0.8, main = "Most frequently mutated genes in HNC samples")
 
 # clean up the enviroment
-rm(heatmap.genes, heatmap.samples)
+rm(mutation.HNC.df, heatmap.genes, heatmap.samples)
 ```
 
 ![](images/frequent_mutations_HNC.png)
@@ -415,6 +422,8 @@ goi.lit = goi.lit[order(goi.lit$Heatmap_position),]
 goi.lit
 
 goi.SL = rownames(heatmap.data)[1:5] # choose the 5 gene with most frequent deleterious mutation
+
+rm(heatmap.data)
 ```
 
 # 3. Find SL/SDL partner
@@ -431,8 +440,7 @@ Define function for Wilcoxon sum rank test following the daisy model. (Bonferron
   })
 
   not_mutated.ID = grep("NA", mutated.ID, value = FALSE) # ID of samples with no goi mutation
-  mutated.ID = mutated.ID[is.na(mutated.ID) == FALSE] # ID of samples with goi mutation
-  mutated.ID = as.integer(mutated.ID)
+  mutated.ID = as.integer(mutated.ID[is.na(mutated.ID) == FALSE]) # ID of samples with goi mutation
 
   p.value = lapply(1:nrow(input_data), function(b) {
     mutated.cna = t(input_data[b, mutated.ID])
@@ -448,7 +456,7 @@ Define function for Wilcoxon sum rank test following the daisy model. (Bonferron
 ```
 Define function for Spearman correlation test following the daisy model.
 ```{r}
-'Daisy.Spearman' <- function(input_genes,input_data){
+'Daisy.Spearman' <- function(input_genes){
   # hier kannst du noch deine Funktion einfügen Tobi
 }
 ```
@@ -459,10 +467,17 @@ Define function to converge SL/SDL sets.
     dat_picker.SoF = SoF[[a]]
     dat_picker.functional_examination = functional.examination[[a]]
     dat_picker.coexpression = coexpression[[a]]
-    out = Reduce(intersect, list(dat_picker.SoF$genes, dat_picker.functional_examination$genes, dat_picker.coexpression$genes))
+    partnergenes = Reduce(intersect, list(dat_picker.SoF$genes, dat_picker.functional_examination$genes, dat_picker.coexpression$genes))
+    out = data.frame(genes = partnergenes, SoF = dat_picker.SoF[which(SL.SoF[[a]]$genes %in% partnergenes),"p_value"], functional_examination = dat_picker.functional_examination[which(SL.functional.examination[[a]]$genes %in% partnergenes),"p_value"], coexpression = dat_picker.coexpression[which(SL.coexpression[[a]]$genes %in% partnergenes),"p_value"])
     return(out)
   })
 }
+```
+Define function to reduce SL/SDL partner to the most significants
+```{r}
+'reduce.partner' <- function(list, element_of_list, treshhold){
+  list[[element_of_list]][which(list[[element_of_list]]$SoF < treshhold*max(list[[element_of_list]]$SoF) & list[[element_of_list]]$functional_examination < treshhold*max(list[[element_of_list]]$functional_examination) & list[[element_of_list]]$coexpression < treshhold*max(list[[element_of_list]]$coexpression)),]
+}  
 ```
 
 ## SL-parter
@@ -521,7 +536,17 @@ for SL
 ```{r}
 SL.partner = partner(goi.SL, SL.SoF, SL.functional.examination, SL.coexpression)
 names(SL.partner) = goi.SL
+lapply(1:length(SL.partner), function(a){nrow(SL.partner[[a]])})
 ```
+```{r}
+
+SL.partner[[1]] = reduce.partner(SL.partner, 1, 0.1)
+SL.partner[[3]] = reduce.partner(SL.partner, 3, 0.6)
+SL.partner[[4]] = reduce.partner(SL.partner, 4, 1) # percentage = 1 muss noch angepasst werden
+SL.partner[[5]] = reduce.partner(SL.partner, 5, 1) # percentage = 1 muss noch angepasst werden
+lapply(1:length(SL.partner), function(a){nrow(SL.partner[[a]])})
+```
+
 and for SDL
 ```{r}
 SDL.partner = partner(goi.SDL, SDL.SoF, SDL.functional.examination, SDL.coexpression)
