@@ -326,7 +326,7 @@ abline(col = c("blue", "red", "black", "orange"),
 ```
 ### Cleanup of the enviroment
 ```{r}
-rm(kd.ceres.HNC.dist, kd.ceres.reference, kd.ceres.reference.dist, esgene1, esgeneT)
+rm(kd.ceres.HNC.dist, kd.ceres.reference, kd.ceres.reference.dist, mean.kd.ceres, mean.kd.ceres.reference, esgene1, esgeneT)
 ```
 
 # 2. Identify genes of interest
@@ -385,6 +385,8 @@ goi.sdl = comb.ex.cna[which(comb.ex.cna$y_kmeans == 3),]
 #sort matrix 
 goi.sdl = goi.sdl[order(goi.sdl$expression,decreasing=TRUE),] 
 head(goi.sdl)
+
+goi.SDL = as.character(goi.sdl$genes[1:5]) # !goi.SDL need to be a vector of 5 gene names for milestone 3!
 ```
 ## Investigate high frequencies of deleterious mutations
 ```{r}
@@ -488,13 +490,13 @@ Define function to reduce SL/SDL partner to the most significants
 ## SL-parter
 ### SoF
 ```{r}
-SL.SoF = Daisy.Wilcox(goi.mut, copynumber)
-names(SL.SoF) = goi.mut
+SL.SoF = Daisy.Wilcox(goi.SL, copynumber)
+names(SL.SoF) = goi.SL
 ```
 ### Functional examination
 ```{r}
-SL.functional.examination = Daisy.Wilcox(goi.mut, kd.ceres)
-names(SL.functional.examination) = goi.mut
+SL.functional.examination = Daisy.Wilcox(goi.SL, kd.ceres)
+names(SL.functional.examination) = goi.SL
 ```
 ### Gene coexpression
 
@@ -537,14 +539,14 @@ SDL.coexpression = Daisy.Spearman(goi.SDL, expression)
 names(SDL.coexpression) = goi.SDL
 ```
 ## Converging the different SL and SDL sets
-for SL
+SL partner:
 ```{r}
 SL.partner = partner(goi.SL, SL.SoF, SL.functional.examination, SL.coexpression)
 names(SL.partner) = goi.SL
 lapply(1:length(SL.partner), function(a){nrow(SL.partner[[a]])})
 ```
+Reduce SL.parter the most significant
 ```{r}
-
 SL.partner[[1]] = reduce.partner(SL.partner, 1, 0.1)
 SL.partner[[3]] = reduce.partner(SL.partner, 3, 0.6)
 SL.partner[[4]] = reduce.partner(SL.partner, 4, 1) # percentage = 1 muss noch angepasst werden
@@ -552,7 +554,7 @@ SL.partner[[5]] = reduce.partner(SL.partner, 5, 1) # percentage = 1 muss noch an
 lapply(1:length(SL.partner), function(a){nrow(SL.partner[[a]])})
 ```
 
-and for SDL
+SDL partner:
 ```{r}
 SDL.partner = partner(goi.SDL, SDL.SoF, SDL.functional.examination, SDL.coexpression)
 names(SDL.partner) = goi.SDL
