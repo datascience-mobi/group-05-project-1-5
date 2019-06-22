@@ -462,8 +462,22 @@ Define function for Wilcoxon sum rank test following the daisy model. (Bonferron
 Define function for Spearman correlation test following the daisy model.
 ```{r}
 'Daisy.Spearman' <- function(input_genes){
-  # hier kannst du noch deine Funktion einfügen Tobi
+  lapply(1:length(input_genes), function(m) { # build up a list with the 5 goi, first lapply: goes through the code for each gene A
+  goi = input_genes[m]
+
+  
+p.value = lapply(1:nrow(expression), function(a){  # creation of a list with the length of the expression data, for the reacent goi go through every gene and calculate cor.test
+  expression.goi =t(expression[goi,])              # variable containing expressiondata of the goi (gene A)
+  expression.GeneB =t(expression[a,])              # variable containing all other genes (gene B)
+ p = cor.test(expression.goi,expression.GeneB, alternative = "greater", method = "spearman", exact = FALSE)$p.value # one sided spearman correlation test  
+})
+  out = data.frame(genes = rownames(expression), p_values = do.call(rbind, p.value)) # return a dataframe with the columns genes(HugoSymbols) and p_values (p.values)
+  out = out[which(out$p_value < 0.05),] # filter for significant p.values
+  out = out[which(out$genes != goi),]   # select onl these wich are not the same gene as the goi (would be a corr of 1)
+  return(out)
+})
 }
+
 ```
 Define function to converge SL/SDL sets.
 ```{r}
@@ -500,21 +514,8 @@ names(SL.functional.examination) = goi.mut
 
 To examine gene pairs A and B which fulfill the criteria of gene co expresssion we performe a Spearman correlation test on the expression data. Therefore the 5 most frequently mutated genes detected in the second milstone are defined as genes A. The correlation test now returns all genes B that correlate to gen A in a significant manner. 
 ```{r}
-SL.coexpression = lapply(1:length(goi.mut), function(m) { # build up a list with the 5 gio, first lapply: goes through the code for each gene A
-  goi = goi.mut[m]
-
-  
-p.value = lapply(1:nrow(expression), function(a){  # creation of a list with the length of the expression data, for the reacent goi go through every gene and calculate cor.test
-  expression.goi =t(expression[goi,])              # variable containing expressiondata of the goi (gene A)
-  expression.GeneB =t(expression[a,])              # variable containing all other genes (gene B)
- p = cor.test(expression.goi,expression.GeneB, alternative = "greater", method = "spearman", exact = FALSE)$p.value # one sided spearman correlation test  
-})
-  out = data.frame(genes = rownames(expression), p_values = do.call(rbind, p.value)) # return a dataframe with the columns genes(HugoSymbols) and p_values (p.values)
-  out = out[which(out$p_value < 0.05),] # filter for significant p.values
-  out = out[which(out$genes != goi),]   # select only these wich are not the same gene as the goi (would be a corr of 1)
-  return(out)
-})
-names(SL.coexpression) = goi.mut
+SL.coexpression = Daisy.Spearman(goi.SL)
+names(SL.coexpression) = goi.SL
 
 ```
 
@@ -533,7 +534,7 @@ names(SDL.functional.examination) = goi.SDL
 ```
 ### Gene coexpression
 ```{r}
-SDL.coexpression = Daisy.Spearman(goi.SDL, expression)
+SDL.coexpression = Daisy.Spearman(goi.SDL)
 names(SDL.coexpression) = goi.SDL
 ```
 ## Converging the different SL and SDL sets
