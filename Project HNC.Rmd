@@ -326,7 +326,7 @@ abline(col = c("blue", "red", "black", "orange"),
 ```
 ### Cleanup of the enviroment
 ```{r}
-rm(kd.ceres.HNC.dist, kd.ceres.reference, kd.ceres.reference.dist, mean.kd.ceres, mean.kd.ceres.reference, esgene1, esgeneT)
+rm(kd.ceres.HNC.dist, kd.ceres.reference, kd.ceres.reference.dist, mean.kd.ceres, mean.kd.ceres.reference, mean.kd.ceres.dist, esgene1, esgeneT)
 ```
 
 # 2. Identify genes of interest
@@ -387,6 +387,7 @@ goi.sdl = goi.sdl[order(goi.sdl$expression,decreasing=TRUE),]
 head(goi.sdl)
 
 goi.SDL = as.character(goi.sdl$genes[1:5]) # !goi.SDL need to be a vector of 5 gene names for milestone 3!
+rm(emp, i, km.genes, y_kmeans, kmeans, km.copynumber, km.data, km.expression, comb.ex.cna) # Clean enviroment
 ```
 ## Investigate high frequencies of deleterious mutations
 ```{r}
@@ -468,10 +469,10 @@ Define function for Spearman correlation test following the daisy model.
   goi = input_genes[m]
 
   
-p.value = lapply(1:nrow(expression), function(a){  # creation of a list with the length of the expression data, for the reacent goi go through every gene and calculate cor.test
-  expression.goi =t(expression[goi,])              # variable containing expressiondata of the goi (gene A)
-  expression.GeneB =t(expression[a,])              # variable containing all other genes (gene B)
- p = cor.test(expression.goi,expression.GeneB, alternative = "greater", method = "spearman", exact = FALSE)$p.value # one sided spearman correlation test  
+  p.value = lapply(1:nrow(expression), function(a){  # creation of a list with the length of the expression data, for the reacent goi go through every gene and calculate cor.test
+    expression.goi =t(expression[goi,])              # variable containing expressiondata of the goi (gene A)
+    expression.GeneB =t(expression[a,])              # variable containing all other genes (gene B)
+    p = cor.test(expression.goi,expression.GeneB, alternative = "greater", method = "spearman", exact = FALSE)$p.value # one sided spearman correlation test  
 })
   out = data.frame(genes = rownames(expression), p_values = do.call(rbind, p.value)) # return a dataframe with the columns genes(HugoSymbols) and p_values (p.values)
   out = out[which(out$p_value < 0.05),] # filter for significant p.values
