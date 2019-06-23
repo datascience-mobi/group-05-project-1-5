@@ -297,6 +297,8 @@ ggqqplot(mean.kd.ceres.dist, x = "kd_values",
 
 # Are there genes that tend to be more essential in HNC?
 esgene1 = kd.ceres.HNC[-which(rowMeans(kd.ceres.HNC)> rowMeans(kd.ceres.reference)),]
+#Sort essential genes 
+esgene1= esgene1[order(rowMeans(esgene1)),]
 
 ```
 result: kd.ceres values are not normal distributed
@@ -321,7 +323,12 @@ summary(esgeneT$EGFR)
 
 ### Boxplot of 20 genes
 ```{r}
-boxplot(esgeneT[810:830], xlab = "gene", horizontal = F)
+#boxplot of 20 of most significiant genes according to knockdown analysis
+boxplot(esgeneT[,1:20], xlab = "gene", horizontal = F, main="Boxplots fof most significiant genes",
+xlab="genes",
+ylab="Knockdown values",
+col="blue",
+border="brown")
 abline(col = c("blue", "red", "black", "orange"),
     lty = 2)
 ```
@@ -332,7 +339,7 @@ rm(kd.ceres.HNC.dist, kd.ceres.reference, kd.ceres.reference.dist, mean.kd.ceres
 
 # 2. Identify genes of interest
 
-## k-means clustering of CNA and expression data with normalized values(-reference)
+## k-means clustering of CNA and expression data with normalized values(-reference) for SDL GOI
 
 ```{r}
 km.genes = Reduce(intersect, list(rownames(expression.HNC), rownames(copynumber.HNC)))
