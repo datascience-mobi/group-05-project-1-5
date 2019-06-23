@@ -400,13 +400,12 @@ rm(emp, i, km.genes, y_kmeans, kmeans, km.copynumber, km.data, km.expression, co
 mutation.HNC.df = do.call(rbind, mutation.HNC) # all mutation data of HNC samples in one dataframe
 heatmap.genes = as.data.frame(table(mutation.HNC.df$Hugo_Symbol)) # dataframe with all mutated genes in HNC samples once
 
-heatmap.samples = lapply(1:(length(ID)), function(a) {
+heatmap.data = as.data.frame(sapply(1:(length(ID)), function(a) {
   out = ifelse(heatmap.genes$Var1 %in% mutation.HNC[[a]]$Hugo_Symbol, 1, 0) # per HNC sample: every gene which is mutated gets a 1, otherwise a 0
   return(out)
-})
+}))
 
 # define row and column names
-heatmap.data = as.data.frame(do.call(cbind, heatmap.samples))
 rownames(heatmap.data) = heatmap.genes$Var1
 colnames(heatmap.data) = ID
 
@@ -418,7 +417,7 @@ heatmap.data = heatmap.data[order(-heatmap.data$sum), 1:27]
 heatmap(data.matrix(heatmap.data)[1:40,], Rowv=NA, Colv=NA, col = c("lightgrey", "tomato2"), scale="column", cexRow = 0.5, cexCol = 0.8, main = "Most frequently mutated genes in HNC samples")
 
 # clean up the enviroment
-rm(mutation.HNC.df, heatmap.genes, heatmap.samples)
+rm(mutation.HNC.df, heatmap.genes)
 ```
 
 ![](images/frequent_mutations_HNC.png)
@@ -456,13 +455,13 @@ Define function for Wilcoxon sum rank test following the daisy model. (Bonferron
   not_mutated.ID = grep("NA", mutated.ID, value = FALSE) # ID of samples with no goi mutation
   mutated.ID = as.integer(mutated.ID[is.na(mutated.ID) == FALSE]) # ID of samples with goi mutation
 
-  p.value = lapply(1:nrow(input_data), function(b) {
+  p.value = sapply(1:nrow(input_data), function(b) {
     mutated.cna = t(input_data[b, mutated.ID])
     not_mutated.cna = t(input_data[b, not_mutated.ID])
     p = wilcox.test(mutated.cna, not_mutated.cna, alternative = "greater")$p.value # one sided (greater) Wilcoxon Sum Rank Test 
   })
 
-  out = data.frame(genes = rownames(input_data), p_value = do.call(rbind, p.value))
+  out = data.frame(genes = rownames(input_data), p_value = p.value)
   out = out[which(out$p_value < 0.05),]
   return(out)
   })
@@ -475,12 +474,12 @@ Define function for Spearman correlation test following the daisy model.
   goi = input_genes[m]
 
   
-  p.value = lapply(1:nrow(expression), function(a){  # creation of a list with the length of the expression data, for the reacent goi go through every gene and calculate cor.test
+  p.value = sapply(1:nrow(expression), function(a){  # creation of a list with the length of the expression data, for the reacent goi go through every gene and calculate cor.test
     expression.goi =t(expression[goi,])              # variable containing expressiondata of the goi (gene A)
     expression.GeneB =t(expression[a,])              # variable containing all other genes (gene B)
     p = cor.test(expression.goi,expression.GeneB, alternative = "greater", method = "spearman", exact = FALSE)$p.value # one sided spearman correlation test  
-})
-  out = data.frame(genes = rownames(expression), p_values = do.call(rbind, p.value)) # return a dataframe with the columns genes(HugoSymbols) and p_values (p.values)
+  })
+  out = data.frame(genes = rownames(expression), p_values = p.value) # return a dataframe with the columns genes(HugoSymbols) and p_values (p.values)
   out = out[which(out$p_value < 0.05),] # filter for significant p.values
   out = out[which(out$genes != goi),]   # select onl these wich are not the same gene as the goi (would be a corr of 1)
   return(out)
@@ -496,7 +495,7 @@ Define function to converge SL/SDL sets.
     dat_picker.functional_examination = functional.examination[[a]]
     dat_picker.coexpression = coexpression[[a]]
     partnergenes = Reduce(intersect, list(dat_picker.SoF$genes, dat_picker.functional_examination$genes, dat_picker.coexpression$genes))
-    out = data.frame(genes = partnergenes, SoF = dat_picker.SoF[which(SL.SoF[[a]]$genes %in% partnergenes),"p_value"], functional_examination = dat_picker.functional_examination[which(SL.functional.examination[[a]]$genes %in% partnergenes),"p_value"], coexpression = dat_picker.coexpression[which(SL.coexpression[[a]]$genes %in% partnergenes),"p_value"])
+    out = data.frame(genes = partnergenes, SoF = dat_picker.SoF[which(dat_picker.SoF$genes %in% partnergenes),"p_value"], functional_examination = dat_picker.functional_examination[which(dat_picker.functional_examination$genes %in% partnergenes),"p_value"], coexpression = dat_picker.coexpression[which(dat_picker.coexpression$genes %in% partnergenes),"p_value"])
     return(out)
   })
 }
@@ -522,7 +521,8 @@ names(SL.functional.examination) = goi.SL
 ### Gene coexpression
 
 To examine gene pairs A and B which fulfill the criteria of gene co expresssion we performe a Spearman correlation test on the expression data. Therefore the 5 most frequently mutated genes detected in the second milstone are defined as genes A. The correlation test now returns all genes B that correlate to gen A in a significant manner. 
-```{r}
+```{r warning=FALSE}
+# Standardabweichung is NULL
 SL.coexpression = Daisy.Spearman(goi.SL)
 names(SL.coexpression) = goi.SL
 
@@ -551,15 +551,15 @@ SL partner:
 ```{r}
 SL.partner = partner(goi.SL, SL.SoF, SL.functional.examination, SL.coexpression)
 names(SL.partner) = goi.SL
-lapply(1:length(SL.partner), function(a){nrow(SL.partner[[a]])})
+data.frame(gene = names(SL.partner), SL_partner = sapply(1:length(SL.partner), function(a){nrow(SL.partner[[a]])}))
 ```
 Reduce SL.parter the most significant
 ```{r}
-SL.partner[[1]] = reduce.partner(SL.partner, 1, 0.1)
-SL.partner[[3]] = reduce.partner(SL.partner, 3, 0.6)
-SL.partner[[4]] = reduce.partner(SL.partner, 4, 1) # percentage = 1 muss noch angepasst werden
-SL.partner[[5]] = reduce.partner(SL.partner, 5, 1) # percentage = 1 muss noch angepasst werden
-lapply(1:length(SL.partner), function(a){nrow(SL.partner[[a]])})
+SL.partner[[1]] = reduce.partner(SL.partner, 1, 0.8)
+SL.partner[[2]] = reduce.partner(SL.partner, 2, 0.35)
+SL.partner[[3]] = reduce.partner(SL.partner, 3, 0.35) 
+SL.partner[[4]] = reduce.partner(SL.partner, 4, 0.15)
+data.frame(gene = names(SL.partner), SL_partner = sapply(1:length(SL.partner), function(a){nrow(SL.partner[[a]])}))
 ```
 
 SDL partner:
@@ -578,11 +578,6 @@ regression.genes = Reduce(intersect, list(rownames(expression), rownames(copynum
 regression.expression = expression[regression.genes,]
 regression.copynumber = copynumber[regression.genes,]
 regression.kd.ceres = kd.ceres[regression.genes,]
-regression.mutation = lapply(1:length(mutation), function(a) {
-  out = mutation[[a]][which(mutation[[a]]$isDeleterious == TRUE),]
-  return(out)
-})
-names(regression.mutation) = names(mutation)
 ```
 Create a dataframe with expression, copynumber, knockdown and mutation data from all samples one after another.
 ```{r}
@@ -590,16 +585,16 @@ regression.data = lapply(1:length(regression.genes), function(a) {
   rg.expr = t(regression.expression[a,])
   rg.cna = t(regression.copynumber[a,])
   rg.kd = t(regression.kd.ceres[a,])
-  rg.mut = lapply(1:length(regression.mutation), function(m) {
-    out = ifelse(regression.genes[a] %in% regression.mutation[[m]]$Hugo_Symbol, TRUE, FALSE)
+  rg.mut = sapply(1:length(mutation), function(m) {
+    out = ifelse(regression.genes[a] %in% mutation[[m]]$Hugo_Symbol, TRUE, FALSE)
     return(out)
   })
-  rg.mut = do.call(rbind, rg.mut)
   out = data.frame("genes" = regression.genes[a], "expression" = rg.expr, "copynumber" = rg.cna, "kockdown" = rg.kd, "mutation" = rg.mut)
   colnames(out) = c("genes", "expression", "copynumber", "kockdown", "mutation")
   return(out)
 })
 regression.data = do.call(rbind, regression.data)
+rm(regression.genes, regression.expression, regression.copynumber, regression.kd.ceres)
 ```
 ## train regression model
 ## test regression model and compare different variable input
