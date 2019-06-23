@@ -274,8 +274,8 @@ rm(all_mutations, all_mutated_genes, all_mutated_genes_df, ID_all_highest_30_fre
 
 ### Checking for NAs and range in HNC patients
 ```{r}
-sum(is.na(kd.ceres.HNC) == TRUE) # Range of data
-range(kd.ceres.HNC)
+sum(is.na(kd.ceres.HNC) == TRUE) #NAs
+range(kd.ceres.HNC)# Range of data
 ```
 ### Definition of a compare group
 ```{r}
@@ -297,6 +297,7 @@ ggqqplot(mean.kd.ceres.dist, x = "kd_values",
 
 # Are there genes that tend to be more essential in HNC?
 esgene1 = kd.ceres.HNC[-which(rowMeans(kd.ceres.HNC)> rowMeans(kd.ceres.reference)),]
+
 ```
 result: kd.ceres values are not normal distributed
 
@@ -310,7 +311,7 @@ gghistogram(kd.ceres.HNC.dist, x = "kd_values", xlab = "knockdown values", bins 
 ```{r}
 wilcox.test(mean.kd.ceres, mean.kd.ceres.reference)
 ```
-
+#Resultat Fehlt
 ### Example EGFR
 ```{r}
 # Transposition of matrix esgene1
@@ -374,13 +375,18 @@ clusplot(comb.ex.cna,
          labels = 4,
          plotchar = FALSE,
          span = TRUE,
+         stand = FALSE,
+         cex =0.5,
          main = paste('Clusters of Genes'),
          xlab = 'Expression',
          ylab = 'CNA')
 
 comb.ex.cna = cbind(comb.ex.cna, y_kmeans)#combine kmeans with genes
+#sort comb.ex.cna data decresing for selecting adequate number of cluster
+comb.ex.cna = comb.ex.cna[order(comb.ex.cna$expression,decreasing =TRUE),]
+
 #Filtering of the most expressed and alterated
-goi.sdl = comb.ex.cna[which(comb.ex.cna$y_kmeans == 3),]
+goi.sdl = comb.ex.cna[which(comb.ex.cna$y_kmeans == comb.ex.cna[1,4]),]
 
 #sort matrix 
 goi.sdl = goi.sdl[order(goi.sdl$expression,decreasing=TRUE),] 
