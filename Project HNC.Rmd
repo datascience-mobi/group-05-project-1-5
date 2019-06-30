@@ -16,7 +16,12 @@ library(tidyverse)  # data manipulation
 library(cluster)    # clustering algorithms
 library(factoextra) # clustering algorithms & visualization
 library(rstudioapi)
-
+library(dplyr)
+library(igraph)
+library(intergraph)
+library(sna)
+library(ggnetwork)
+library(plotly)
 '%!in%' <- function(x,y)!('%in%'(x,y)) # Define function "is not in"
 ```
 
@@ -570,6 +575,45 @@ SL.partner[[3]] = reduce.partner(SL.partner, 3, 0.35)
 SL.partner[[4]] = reduce.partner(SL.partner, 4, 0.15)
 data.frame(gene = names(SL.partner), SL_partner = sapply(1:length(SL.partner), function(a){nrow(SL.partner[[a]])}))
 ```
+
+### plotting networks of the Interactions 
+
+```{r}
+TP53.List = SL.partner[["TP53"]]$genes
+edge.list.TP53 = data.frame(Gene.A = "TP53",Gene.B = TP53.List)
+
+TTN.List = SL.partner[["TTN"]]$genes
+edge.list.TTN = data.frame(Gene.A = "TTN",Gene.B = TTN.List)
+
+MUC16.List = SL.partner[["MUC16"]]$genes
+edge.list.MUC16 = data.frame(Gene.A = "MUC16",Gene.B = MUC16.List)
+
+FAT1.List = SL.partner[["FAT1"]]$genes
+edge.list.FAT1 = data.frame(Gene.A = "FAT1",Gene.B = FAT1.List)
+
+CDKN2A.List = SL.partner[["CDKN2A"]]$genes
+edge.list.CDKN2A = data.frame(Gene.A = "CDKN2A",Gene.B = CDKN2A.List)
+
+edge.list = bind_rows(edge.list.TP53,edge.list.TTN,edge.list.MUC16,edge.list.FAT1,edge.list.CDKN2A)
+
+
+
+plot = graph_from_data_frame(edge.list, directed = TRUE)
+V(plot)$degree <- centralization.degree(plot)$res
+
+
+plot= ggnetwork(plot)
+
+plot <- ggplot(plot,aes(x = x, y = y, xend = xend, yend = yend)) +
+    geom_edges(size = 0.4, alpha = 0.25) +
+    geom_nodes( aes (size = degree))+
+    geom_nodetext(aes(label = vertex.names, size =80)) +
+    ggtitle("SL partner network") +
+    theme_blank()
+
+plot
+```
+
 
 SDL partner:
 ```{r}
