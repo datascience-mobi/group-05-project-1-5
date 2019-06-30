@@ -25,8 +25,7 @@ Head and neck cancer is defined as a group of cancers, concerning the mouth, nos
 
 
 ![](images/HNC_Kopf.png)
-In the century of next generation sequencing, the genome became an interesting target for scientists.Approaches that directly affect important oncogenes often fail due to the fact that these genes play an improtant role in healthy cells.The researchers in our paper investigated synthetic lethality and synthetic dosage letahlity that uses gene interactions to affect tumorous proliferation. Synthetic letahlity is a gene interaction in which single-gene defects
-are compatible with cell viability, but the combination of gene effects results in cell death.Synthetic dosage lethality occurs, when the overexpression of one gene is combined with the knockout of another gene.
+In the century of next generation sequencing, the genome became an interesting target for scientists.Approaches that directly affect important oncogenes often fail due to the fact that these genes play an important role in healthy cells.The researchers in our paper investigated synthetic lethality and synthetic dosage lethality that uses gene interactions to affect tumorous proliferation. Synthetic letahlity is a gene interaction in which single-gene defects are compatible with cell viability, but the combination of gene effects results in cell death.Synthetic dosage lethality occurs, when the overexpression of one gene is combined with the knockout of another gene.
 
 ![](images/Daisy.png)
 
@@ -256,13 +255,14 @@ colnames(HNC_mutated_genes_df_highest_ordered) = colnames_ordered
 
 Plot mutations in all samples
 ```{r}
-all_mut_plot = ggplot(data = all_mutated_genes_df_highest_30_ordered, aes(x=Gene, y=Freq)) + geom_bar(stat = "identity", width = 0.5, fill="steelblue") +  geom_text(aes(label=Freq), vjust=-0.3, size=3.5) + theme_minimal()
+all_mut_plot = ggplot(data = all_mutated_genes_df_highest_30_ordered, aes(x=Gene, y=Freq)) + geom_bar(stat = "identity", width = 0.5, fill="steelblue") +  geom_text(aes(label=Freq), vjust=-0.3, size=2.5,) + theme_grey() + coord_flip()
+
 all_mut_plot
 ```
 
 Plot mutations in HNC samples
 ```{r}
-HNC_mut_plot = ggplot(data = HNC_mutated_genes_df_highest_ordered, aes(x=Gene, y=Freq)) + geom_bar(stat = "identity", width = 0.5, fill="steelblue") + geom_text(aes(label=Freq), vjust=-0.3, size=3.5) + theme_minimal()
+HNC_mut_plot = ggplot(data = HNC_mutated_genes_df_highest_ordered, aes(x=Gene, y=Freq)) + geom_bar(stat = "identity", width = 0.5, fill="steelblue") + geom_text(aes(label=Freq), vjust=-0.3, size=3.5) + theme_grey()+ coord_flip()
 HNC_mut_plot
 ```
 ### Cleanup of the enviroment
@@ -293,7 +293,7 @@ mean.kd.ceres.dist = rbind(kd.ceres.reference.dist, kd.ceres.HNC.dist)
 ggqqplot(mean.kd.ceres.dist, x = "kd_values",
    color = "sample",
    palette = c("#FC4E07", "#0073C2FF"),
-   ggtheme = theme_pubclean())
+   ggtheme = theme_grey())
 
 # Are there genes that tend to be more essential in HNC?
 esgene1 = kd.ceres.HNC[-which(rowMeans(kd.ceres.HNC)> rowMeans(kd.ceres.reference)),]
@@ -307,7 +307,7 @@ result: kd.ceres values are not normal distributed
 ```{r}
 gghistogram(kd.ceres.HNC.dist, x = "kd_values", xlab = "knockdown values", bins = 60,
             fill = "#0073C2FF", color = "#0073C2FF",
-            add = "mean", rug = TRUE)
+            add = "mean", rug = TRUE)+theme_grey()
 ```
 ### Applying Wilcoxon rank sum test because knockdown values are not normally distributed
 ```{r}
@@ -324,11 +324,13 @@ summary(esgeneT$EGFR)
 ### Boxplot of 20 genes
 ```{r}
 #boxplot of 20 of most significiant genes according to knockdown analysis
-boxplot(esgeneT[,1:20], xlab = "gene", horizontal = F, main="Boxplots fof most significiant genes",
-xlab="genes",
-ylab="Knockdown values",
-col="blue",
-border="brown")
+boxplot(esgeneT[,1:20], xlab = "gene", horizontal = F, main="Knockdown values of most significiant genes",
+        xlab="genes",
+        ylab="Knockdown values",
+        col="blue",
+        border="brown",
+        outline = TRUE,
+        notch = TRUE)
 abline(col = c("blue", "red", "black", "orange"),
     lty = 2)
 ```
