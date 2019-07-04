@@ -320,7 +320,7 @@ gghistogram(kd.ceres.HNC.dist, x = "kd_values", xlab = "knockdown values", bins 
 ```{r}
 wilcox.test(mean.kd.ceres, mean.kd.ceres.reference)
 ```
-#Resultat Fehlt
+Resultat Fehlt
 ### Example EGFR
 ```{r}
 # Transposition of matrix esgene1
@@ -460,7 +460,7 @@ rm(heatmap.data)
 Define function for Wilcoxon sum rank test following the daisy model. (Bonferroni correction needs to be added)
 ```{r}
 'Daisy.Wilcox' <- function(input_genes,input_data){
-  lapply(1:length(input_genes), function(m) {
+  Daisy_Wilcox = lapply(1:length(input_genes), function(m) {
   goi = input_genes[m] # set 1 of 5 goi
 
   mutated.ID = lapply(1:length(mutation), function(a) {
@@ -481,12 +481,15 @@ Define function for Wilcoxon sum rank test following the daisy model. (Bonferron
   out = out[which(out$p_value < 0.05),]
   return(out)
   })
+  names(Daisy_Wilcox) = input_genes
 }
 ```
 Define function for Spearman correlation test following the daisy model.
+
+To examine gene pairs A and B which fulfill the criteria of gene co expresssion we performe a Spearman correlation test on the expression data. Therefore the 5 most frequently mutated genes detected in the second milstone are defined as genes A. The correlation test now returns all genes B that correlate to gen A in a significant manner. 
 ```{r}
 'Daisy.Spearman' <- function(input_genes){
-  lapply(1:length(input_genes), function(m) { # build up a list with the 5 goi, first lapply: goes through the code for each gene A
+  Daisy_Spearman = lapply(1:length(input_genes), function(m) { # build up a list with the 5 goi, first lapply: goes through the code for each gene A
   goi = input_genes[m]
 
   
@@ -499,27 +502,58 @@ Define function for Spearman correlation test following the daisy model.
   out = out[which(out$p_value < 0.05),] # filter for significant p.values
   out = out[which(out$genes != goi),]   # select onl these wich are not the same gene as the goi (would be a corr of 1)
   return(out)
-})
+  })
+  names(Daisy_Spearman) = input_genes
 }
 
 ```
+The returned list, contains the five genes of interest as elements each containing a dataframe with all genes examined as potential SL partners additional with there calculated p-values.
+
 Define function to converge SL/SDL sets.
 ```{r}
-'partner' <- function(genes_input, SoF, functional.examination, coexpression){
-  lapply(1:length(genes_input), function(a) {
+'partner' <- function(input_genes, SoF, functional.examination, coexpression){
+  partner = lapply(1:length(input_genes), function(a) {
     dat_picker.SoF = SoF[[a]]
     dat_picker.functional_examination = functional.examination[[a]]
     dat_picker.coexpression = coexpression[[a]]
     partnergenes = Reduce(intersect, list(dat_picker.SoF$genes, dat_picker.functional_examination$genes, dat_picker.coexpression$genes))
-    out = data.frame(genes = partnergenes, SoF = dat_picker.SoF[which(dat_picker.SoF$genes %in% partnergenes),"p_value"], functional_examination = dat_picker.functional_examination[which(dat_picker.functional_examination$genes %in% partnergenes),"p_value"], coexpression = dat_picker.coexpression[which(dat_picker.coexpression$genes %in% partnergenes),"p_value"])
+    out = data.frame(genes = partnergenes,
+                     SoF = dat_picker.SoF[which(dat_picker.SoF$genes %in% partnergenes),"p_value"],
+                     functional_examination = dat_picker.functional_examination[which(dat_picker.functional_examination$genes %in% partnergenes),"p_value"],
+                     coexpression = dat_picker.coexpression[which(dat_picker.coexpression$genes %in% partnergenes),"p_value"])
     return(out)
   })
+  names(partner) = input_genes
 }
 ```
 Define function to reduce SL/SDL partner to the most significants
 ```{r}
-'reduce.partner' <- function(list, element_of_list, treshhold){
-  list[[element_of_list]][which(list[[element_of_list]]$SoF < treshhold*max(list[[element_of_list]]$SoF) & list[[element_of_list]]$functional_examination < treshhold*max(list[[element_of_list]]$functional_examination) & list[[element_of_list]]$coexpression < treshhold*max(list[[element_of_list]]$coexpression)),]
+'reduce.partner' <- function(list, keep_element){
+  reduced_partner = lapply(1:length(list), function(a){
+    dat_picker = list[[a]]
+    ordered_data = dat_picker[order(dat_picker$SoF, dat_picker$functional_examination, dat_picker$coexpression),]
+    if (nrow(dat_picker) > 20) { # (1) if length of dat_picker is larger than 20 reduce to the 20 most significant
+      
+      if (keep_element %in% ordered_data$genes) { # (2) if keep_element is in ordered_data then return first 20 entries plus keep_element
+        position.keep_element = grep(keep_element, ordered_data$genes) # search for position of keep_element
+        
+        if (position.keep_element > 20) {
+          out = ordered_data[c(1:19, position.keep_element),] # (3) keep_element is not in the first 20 elements and needs to be extra added
+        } else {
+          out = ordered_data[1:20,] # (3) keep_element is in the first 20 elements and don´t need to be extra added
+        }
+        
+      } else {
+        out = ordered_data[1:20,] # (2) if keep_element is not in ordered_data just return first 20 entries
+      }
+      return(out) # return reduced data
+      
+    } else {
+      return(ordered_data) # (1) return data unreduced if length of dat_picker is smaller than 20
+    }
+  })
+  names(reduced_partner) = names(list)
+  return(reduced_partner)
 }  
 ```
 
@@ -527,59 +561,42 @@ Define function to reduce SL/SDL partner to the most significants
 ### SoF
 ```{r}
 SL.SoF = Daisy.Wilcox(goi.SL, copynumber)
-names(SL.SoF) = goi.SL
 ```
 ### Functional examination
 ```{r}
 SL.functional.examination = Daisy.Wilcox(goi.SL, kd.ceres)
-names(SL.functional.examination) = goi.SL
 ```
 ### Gene coexpression
-
-To examine gene pairs A and B which fulfill the criteria of gene co expresssion we performe a Spearman correlation test on the expression data. Therefore the 5 most frequently mutated genes detected in the second milstone are defined as genes A. The correlation test now returns all genes B that correlate to gen A in a significant manner. 
 ```{r warning=FALSE}
 # Standardabweichung is NULL
 SL.coexpression = Daisy.Spearman(goi.SL)
-names(SL.coexpression) = goi.SL
-
 ```
-
-The returned list, contains the five genes of interest as elements each containing a dataframe with all genes examined as potential SL partners additional with there calculated p-values.
 
 ## SDL-parter
 ### SoF
 ```{r}
 SDL.SoF = Daisy.Wilcox(goi.SDL, copynumber)
-names(SDL.SoF) = goi.SDL
 ```
 ### Functional examination
 ```{r}
 SDL.functional.examination = Daisy.Wilcox(goi.SDL, kd.ceres)
-names(SDL.functional.examination) = goi.SDL
 ```
 ### Gene coexpression
 ```{r warning=FALSE}
 SDL.coexpression = Daisy.Spearman(goi.SDL)
-names(SDL.coexpression) = goi.SDL
 ```
 ## Converging the different SL and SDL sets
-SL partner:
 ```{r}
 SL.partner = partner(goi.SL, SL.SoF, SL.functional.examination, SL.coexpression)
-names(SL.partner) = goi.SL
-data.frame(gene = names(SL.partner), SL_partner = sapply(1:length(SL.partner), function(a){nrow(SL.partner[[a]])}))
-```
-Reduce SL.parter the most significant
-```{r}
-SL.partner[[1]] = reduce.partner(SL.partner, 1, 0.8)
-SL.partner[[2]] = reduce.partner(SL.partner, 2, 0.35)
-SL.partner[[3]] = reduce.partner(SL.partner, 3, 0.35) 
-SL.partner[[4]] = reduce.partner(SL.partner, 4, 0.15)
-data.frame(gene = names(SL.partner), SL_partner = sapply(1:length(SL.partner), function(a){nrow(SL.partner[[a]])}))
+SDL.partner = partner(goi.SDL, SDL.SoF, SDL.functional.examination, SDL.coexpression)
+data.frame("SL genes" = names(SL.partner),
+           SL_partner = sapply(1:length(SL.partner), function(a){nrow(SL.partner[[a]])}),
+           "SDL genes" = names(SL.partner),
+           SDL_partner = sapply(1:length(SDL.partner), function(a){nrow(SDL.partner[[a]])})
+           )
 ```
 
-### plotting networks of the Interactions 
-
+## Plotting networks of the Interactions 
 ```{r}
 TP53.List = SL.partner[["TP53"]]$genes
 append(TP53.List, "TP53")
@@ -617,13 +634,21 @@ rm(edge.list.CDKN2A,edge.list.FAT1,edge.list.MUC16,edge.list.TP53,edge.list.TTN,
          
 ```
 
-
-SDL partner:
+## Reduce SL.parter/SDL.partner to the most significant
 ```{r}
-SDL.partner = partner(goi.SDL, SDL.SoF, SDL.functional.examination, SDL.coexpression)
-names(SDL.partner) = goi.SDL
+SL.partner = reduce.partner(SL.partner, "...")
+SDL.partner = reduce.partner(SDL.partner, "...")
+data.frame("SL genes" = names(SL.partner),
+           SL_partner = sapply(1:length(SL.partner), function(a){nrow(SL.partner[[a]])}),
+           "SDL genes" = names(SL.partner),
+           SDL_partner = sapply(1:length(SDL.partner), function(a){nrow(SDL.partner[[a]])})
+           )
 ```
 
+## Plotting SL/SDL partner network with reduced number of partner
+```{r}
+
+```
 
 # 4. Mutation prediction via logistical regression
 ## Prepare data for regression model
