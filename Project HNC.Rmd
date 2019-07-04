@@ -22,6 +22,8 @@ library(intergraph)
 library(sna)
 library(ggnetwork)
 library(plotly)
+library(GGally)
+library(network)
 '%!in%' <- function(x,y)!('%in%'(x,y)) # Define function "is not in"
 ```
 
@@ -493,7 +495,7 @@ Define function for Spearman correlation test following the daisy model.
     expression.GeneB =t(expression[a,])              # variable containing all other genes (gene B)
     p = cor.test(expression.goi,expression.GeneB, alternative = "greater", method = "spearman", exact = FALSE)$p.value # one sided spearman correlation test  
   })
-  out = data.frame(genes = rownames(expression), p_values = p.value) # return a dataframe with the columns genes(HugoSymbols) and p_values (p.values)
+  out = data.frame(genes = rownames(expression), p_value = p.value) # return a dataframe with the columns genes(HugoSymbols) and p_values (p.values)
   out = out[which(out$p_value < 0.05),] # filter for significant p.values
   out = out[which(out$genes != goi),]   # select onl these wich are not the same gene as the goi (would be a corr of 1)
   return(out)
@@ -556,7 +558,7 @@ SDL.functional.examination = Daisy.Wilcox(goi.SDL, kd.ceres)
 names(SDL.functional.examination) = goi.SDL
 ```
 ### Gene coexpression
-```{r}
+```{r warning=FALSE}
 SDL.coexpression = Daisy.Spearman(goi.SDL)
 names(SDL.coexpression) = goi.SDL
 ```
@@ -580,38 +582,39 @@ data.frame(gene = names(SL.partner), SL_partner = sapply(1:length(SL.partner), f
 
 ```{r}
 TP53.List = SL.partner[["TP53"]]$genes
-edge.list.TP53 = data.frame(Gene.A = "TP53",Gene.B = TP53.List)
+append(TP53.List, "TP53")
+edge.list.TP53 = data.frame(Gene.A = "TP53",Gene.B = TP53.List, colours = "darkred")
 
 TTN.List = SL.partner[["TTN"]]$genes
-edge.list.TTN = data.frame(Gene.A = "TTN",Gene.B = TTN.List)
+edge.list.TTN = data.frame(Gene.A = "TTN",Gene.B = TTN.List, colours = "darkgreen")
 
 MUC16.List = SL.partner[["MUC16"]]$genes
-edge.list.MUC16 = data.frame(Gene.A = "MUC16",Gene.B = MUC16.List)
+edge.list.MUC16 = data.frame(Gene.A = "MUC16",Gene.B = MUC16.List, colours = "turquoise")
 
 FAT1.List = SL.partner[["FAT1"]]$genes
-edge.list.FAT1 = data.frame(Gene.A = "FAT1",Gene.B = FAT1.List)
+edge.list.FAT1 = data.frame(Gene.A = "FAT1",Gene.B = FAT1.List, colours = "yellow")
 
 CDKN2A.List = SL.partner[["CDKN2A"]]$genes
-edge.list.CDKN2A = data.frame(Gene.A = "CDKN2A",Gene.B = CDKN2A.List)
+edge.list.CDKN2A = data.frame(Gene.A = "CDKN2A",Gene.B = CDKN2A.List, colours = "orange")
+
 
 edge.list = bind_rows(edge.list.TP53,edge.list.TTN,edge.list.MUC16,edge.list.FAT1,edge.list.CDKN2A)
 
 
+net = graph_from_data_frame(edge.list, directed = T)
 
-plot = graph_from_data_frame(edge.list, directed = TRUE)
-V(plot)$degree <- centralization.degree(plot)$res
+layout1 = layout_with_kk(net)
+layout2 = layout_with_fr(net)
+layout3 = layout_nicely(net)
 
 
-plot= ggnetwork(plot)
+plot(net, layout = layout2, rescale = T, ylim = c(-0.9,1), xlim = c(-0.02,-0.1), edge.color = edge.list$colours, edge.arrow.size = 0.1 , edge.width = 2, edge.arrow.mode = 1, vertex.color = "grey", vertex.size = 8.1, vertex.label.font = 2, vertex.label.degree = -pi/2, vertex.label.color = "black" ) 
 
-plot <- ggplot(plot,aes(x = x, y = y, xend = xend, yend = yend)) +
-    geom_edges(size = 0.4, alpha = 0.25) +
-    geom_nodes( aes (size = degree))+
-    geom_nodetext(aes(label = vertex.names, size =80)) +
-    ggtitle("SL partner network") +
-    theme_blank()
+legend (x = 1.2, y = 1, goi.SL,  fill = c("darkred", "darkgreen", "turquoise", "yellow", "orange")) 
 
-plot
+# Cleanup of the environment
+rm(edge.list.CDKN2A,edge.list.FAT1,edge.list.MUC16,edge.list.TP53,edge.list.TTN,layout1,layout2,layout3,CDKN2A.List,FAT1.List,TP53.List,TTN.List,MUC16.List)
+         
 ```
 
 
