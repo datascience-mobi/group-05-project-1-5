@@ -459,22 +459,36 @@ rm(heatmap.data)
 ## Define functions for SL/SDL partner search
 Define function for Wilcoxon sum rank test following the daisy model. (Bonferroni correction needs to be added)
 ```{r}
-'Daisy.Wilcox' <- function(input_genes,input_data){
+'Daisy.Wilcox' <- function(input_genes,input_data, inactive_overactive, less_greater){
   Daisy_Wilcox = lapply(1:length(input_genes), function(m) {
   goi = input_genes[m] # set 1 of 5 goi
-
-  mutated.ID = lapply(1:length(mutation), function(a) {
+  # depending on SL or SDL partner search gene B needs to be inactive (SL) or overactive (SDL)
+  if(inactive_overactive == 1) { # inactive_overactive == 1 chooses overactive
+    mean.exp.goi = mean(t(expression[goi,]))
+    exp.goi.norm = expression[goi,] - mean.exp.goi # normalised expression values of goi
+    mut_overa.ID = lapply(1:ncol(expression), function(a) {
+    out = if(exp.goi.norm[goi, a] > 0 & copynumber[goi,a] > 0.3) {a} else {NA} # filter all IDs which are overactive: overexpressed and CNA > 0,3
+    return(out)
+    })
+  } else { # inactive_overactive == 0 chooses inactive
+    mut_overa.ID = lapply(1:length(mutation), function(a) {
     out = ifelse(goi %in% mutation[[a]]$Hugo_Symbol, a, NA) # filter all IDs which have a mutation of goi
     return(out)
-  })
-
-  not_mutated.ID = grep("NA", mutated.ID, value = FALSE) # ID of samples with no goi mutation
-  mutated.ID = as.integer(mutated.ID[is.na(mutated.ID) == FALSE]) # ID of samples with goi mutation
+    })
+  }
+  
+  not_mut_overa.ID = grep("NA", mut_overa.ID) # ID of samples which have NO inactivity/overactivity of goi
+  mut_overa.ID = as.integer(mut_overa.ID[is.na(mut_overa.ID) == FALSE]) # ID of samples which HAVE inactivity/overactivity of goi
 
   p.value = sapply(1:nrow(input_data), function(b) {
-    mutated.cna = t(input_data[b, mutated.ID])
-    not_mutated.cna = t(input_data[b, not_mutated.ID])
-    p = wilcox.test(mutated.cna, not_mutated.cna, alternative = "greater")$p.value # one sided (greater) Wilcoxon Sum Rank Test 
+    mut_overa.data = t(input_data[b, mut_overa.ID])
+    not_mut_overa.data = t(input_data[b, not_mut_overa.ID])
+    if (less_greater == 1) {
+      p = wilcox.test(mut_overa.data, not_mut_overa.data, alternative = "greater")$p.value # one sided (greater) Wilcoxon Sum Rank Test 
+    } else {
+      p = wilcox.test(mut_overa.data, not_mut_overa.data, alternative = "less")$p.value # one sided (greater) Wilcoxon Sum Rank Test
+    }
+    
   })
 
   out = data.frame(genes = rownames(input_data), p_value = p.value)
@@ -482,6 +496,7 @@ Define function for Wilcoxon sum rank test following the daisy model. (Bonferron
   return(out)
   })
   names(Daisy_Wilcox) = input_genes
+  return(Daisy_Wilcox)
 }
 ```
 Define function for Spearman correlation test following the daisy model.
@@ -493,19 +508,19 @@ To examine gene pairs A and B which fulfill the criteria of gene co expresssion 
   goi = input_genes[m]
 
   
-  p.value = sapply(1:nrow(expression), function(a){  # creation of a list with the length of the expression data, for the reacent goi go through every gene and calculate cor.test
+  p.value = sapply(1:20, function(a){  # creation of a list with the length of the expression data, for the reacent goi go through every gene and calculate cor.test #!! nrow(expression)
     expression.goi =t(expression[goi,])              # variable containing expressiondata of the goi (gene A)
     expression.GeneB =t(expression[a,])              # variable containing all other genes (gene B)
     p = cor.test(expression.goi,expression.GeneB, alternative = "greater", method = "spearman", exact = FALSE)$p.value # one sided spearman correlation test  
   })
-  out = data.frame(genes = rownames(expression), p_value = p.value) # return a dataframe with the columns genes(HugoSymbols) and p_values (p.values)
-  out = out[which(out$p_value < 0.05),] # filter for significant p.values
+  out = data.frame(genes = rownames(expression)[1:20], p_value = p.value) # return a dataframe with the columns genes(HugoSymbols) and p_values (p.values) #!! 1:20
+  #!! out = out[which(out$p_value < 0.05),] # filter for significant p.values
   out = out[which(out$genes != goi),]   # select onl these wich are not the same gene as the goi (would be a corr of 1)
   return(out)
   })
   names(Daisy_Spearman) = input_genes
+  return(Daisy_Spearman)
 }
-
 ```
 The returned list, contains the five genes of interest as elements each containing a dataframe with all genes examined as potential SL partners additional with there calculated p-values.
 
@@ -524,6 +539,7 @@ Define function to converge SL/SDL sets.
     return(out)
   })
   names(partner) = input_genes
+  return(partner)
 }
 ```
 Define function to reduce SL/SDL partner to the most significants
@@ -558,30 +574,30 @@ Define function to reduce SL/SDL partner to the most significants
 ```
 
 ## SL-parter
-### SoF
+SoF
 ```{r}
-SL.SoF = Daisy.Wilcox(goi.SL, copynumber)
+SL.SoF = Daisy.Wilcox(goi.SL, copynumber, inactive_overactive = 0, less_greater = 1) # SoF, one sided Wilcoxon rank test, alternative = "greater"
 ```
-### Functional examination
+Functional examination
 ```{r}
-SL.functional.examination = Daisy.Wilcox(goi.SL, kd.ceres)
+SL.functional.examination = Daisy.Wilcox(goi.SL, kd.ceres, inactive_overactive = 0, less_greater = 0) # Functional examination, one sided Wilcoxon rank test, alternative = "less"
 ```
-### Gene coexpression
+Gene coexpression
 ```{r warning=FALSE}
 # Standardabweichung is NULL
 SL.coexpression = Daisy.Spearman(goi.SL)
 ```
 
 ## SDL-parter
-### SoF
+SoF
 ```{r}
-SDL.SoF = Daisy.Wilcox(goi.SDL, copynumber)
+SDL.SoF = Daisy.Wilcox(goi.SDL, copynumber, inactive_overactive = 1, less_greater = 1) # SoF, one sided Wilcoxon rank test, alternative = "greater"
 ```
-### Functional examination
+Functional examination
 ```{r}
-SDL.functional.examination = Daisy.Wilcox(goi.SDL, kd.ceres)
+SDL.functional.examination = Daisy.Wilcox(goi.SDL, kd.ceres, inactive_overactive = 1, less_greater = 0) # Functional examination, one sided Wilcoxon rank test, alternative = "less"
 ```
-### Gene coexpression
+Gene coexpression
 ```{r warning=FALSE}
 SDL.coexpression = Daisy.Spearman(goi.SDL)
 ```
@@ -591,7 +607,7 @@ SL.partner = partner(goi.SL, SL.SoF, SL.functional.examination, SL.coexpression)
 SDL.partner = partner(goi.SDL, SDL.SoF, SDL.functional.examination, SDL.coexpression)
 data.frame("SL genes" = names(SL.partner),
            SL_partner = sapply(1:length(SL.partner), function(a){nrow(SL.partner[[a]])}),
-           "SDL genes" = names(SL.partner),
+           "SDL genes" = names(SDL.partner),
            SDL_partner = sapply(1:length(SDL.partner), function(a){nrow(SDL.partner[[a]])})
            )
 ```
@@ -634,7 +650,7 @@ rm(edge.list.CDKN2A,edge.list.FAT1,edge.list.MUC16,edge.list.TP53,edge.list.TTN,
          
 ```
 
-## Reduce SL.parter/SDL.partner to the most significant
+Reduce SL.parter/SDL.partner to the most significant
 ```{r}
 SL.partner = reduce.partner(SL.partner, "...")
 SDL.partner = reduce.partner(SDL.partner, "...")
@@ -645,7 +661,7 @@ data.frame("SL genes" = names(SL.partner),
            )
 ```
 
-## Plotting SL/SDL partner network with reduced number of partner
+Plotting SL/SDL partner network with reduced number of partner
 ```{r}
 
 ```
