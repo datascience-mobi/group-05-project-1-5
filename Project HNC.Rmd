@@ -15,15 +15,9 @@ library(png)
 library(tidyverse)  # data manipulation
 library(cluster)    # clustering algorithms
 library(factoextra) # clustering algorithms & visualization
-library(rstudioapi)
-library(dplyr)
-library(igraph)
-library(intergraph)
-library(sna)
-library(ggnetwork)
-library(plotly)
-library(GGally)
-library(network)
+library(igraph)     # networkplot 
+
+
 '%!in%' <- function(x,y)!('%in%'(x,y)) # Define function "is not in"
 ```
 
