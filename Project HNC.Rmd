@@ -159,9 +159,11 @@ rm(mean.exp.HNC, mean.exp.reference, expression.reference)
 
 Examination of NA values in the copynumber.HNC data
 ```{r}
+# sum up all NAs in each row
 NA.rows = apply(copynumber.HNC,1, function(x) {
           sum(is.na(x))
 })
+#define all rows cotaining missing values
 NA.rows = which( NA.rows > 0)
 length(NA.rows)
 ```
@@ -187,7 +189,7 @@ length(NA.rows.ref)
 ```{r}
 summary(NA.rows == NA.rows.ref)
 ```
-Genes with NA values are the same for the HNC samples compared to all the other samples. Therefore, they can be deleted in the reference data as well.
+Genes with NA values are the same for the HNC samples and all the other samples. Therefore, they can be deleted in the reference data as well.
 
 ```{r}
 copynumber.reference = copynumber.reference[-NA.rows.ref,]
@@ -208,8 +210,7 @@ copynumber.HNC.mean = apply(copynumber.HNC ,1, mean)
 Creating a matrix of HNC copynumber values. The values are normalized to the mean copynumbers of the reference data. For further analysing the matrix is ordered in a decreasing manner.
 ```{r}
 copynumber.HNC.norm = copynumber.HNC.mean - copynumber.ref.mean
-copynumber.HNC.norm = copynumber.HNC.norm[order(copynumber.HNC.norm, decreasing = TRUE )]
-copynumber.HNC.norm = as.data.frame(copynumber.HNC.norm)
+copynumber.HNC.norm = as.data.frame(copynumber.HNC.norm[order(copynumber.HNC.norm, decreasing = TRUE )])
 copynumber.HNC.norm$genes = row.names(copynumber.HNC.norm)
 ```
 Creating a dataframe of all copynumber values. The values are normalized to the mean copynumbers of the reference data.
@@ -262,7 +263,7 @@ colnames(HNC_mutated_genes_df_highest_ordered) = colnames_ordered
 
 Plot mutations in all samples
 ```{r}
-all_mut_plot = ggplot(data = all_mutated_genes_df_highest_30_ordered, aes(x=Gene, y=Freq)) + geom_bar(stat = "identity", width = 0.5, fill="steelblue") +  geom_text(aes(label=Freq), vjust=-0.3, size=2.5,) + theme_grey() + coord_flip()
+all_mut_plot = ggplot(data = all_mutated_genes_df_highest_30_ordered, aes(x=Gene, y=Freq)) + geom_bar(stat = "identity", width = 0.5, fill="steelblue") +  geom_text(aes(label=Freq), vjust=-0.3, size=2.5) + theme_grey() + coord_flip()
 
 all_mut_plot
 ```
@@ -489,18 +490,20 @@ Define function for Spearman correlation test following the daisy model.
 To examine gene pairs A and B which fulfill the criteria of gene co expresssion we performe a Spearman correlation test on the expression data. Therefore the 5 most frequently mutated genes detected in the second milstone are defined as genes A. The correlation test now returns all genes B that correlate to gen A in a significant manner. 
 ```{r}
 'Daisy.Spearman' <- function(input_genes){
-  Daisy_Spearman = lapply(1:length(input_genes), function(m) { # build up a list with the 5 goi, first lapply: goes through the code for each gene A
+  Daisy_Spearman = lapply(1:length(input_genes), function(m) { # build up a list with the 5 goi, first       lapply: goes through the code for each gene A
   goi = input_genes[m]
 
   
-  p.value = sapply(1:nrow(expression), function(a){  # creation of a list with the length of the expression data, for the reacent goi go through every gene and calculate cor.test
-    expression.goi =t(expression[goi,])              # variable containing expressiondata of the goi (gene A)
-    expression.GeneB =t(expression[a,])              # variable containing all other genes (gene B)
+  p.value = sapply(1:nrow(expression), function(a){  # creation of a list with the length of the expression   data, for the reacent goi, go through every gene and calculate cor.test
+    expression.goi =t(expression[goi,])           # variable containing expressiondata of the goi (gene A)
+    expression.GeneB =t(expression[a,])           # variable containing all other genes (gene B)
     p = cor.test(expression.goi,expression.GeneB, alternative = "greater", method = "spearman", exact = FALSE)$p.value # one sided spearman correlation test  
   })
-  out = data.frame(genes = rownames(expression), p_value = p.value) # return a dataframe with the columns genes(HugoSymbols) and p_values (p.values)
+  
+  # return a dataframe with the columns genes(HugoSymbols) and p_values (p.values)
+  out = data.frame(genes = rownames(expression), p_value = p.value)
   out = out[which(out$p_value < 0.05),] # filter for significant p.values
-  out = out[which(out$genes != goi),]   # select onl these wich are not the same gene as the goi (would be a corr of 1)
+  out = out[which(out$genes != goi),]   # select onl these wich are not the same gene as the goi (would be   a corr of 1)
   return(out)
   })
   names(Daisy_Spearman) = input_genes
@@ -556,6 +559,20 @@ Define function to reduce SL/SDL partner to the most significants
   return(reduced_partner)
 }  
 ```
+Create dataframe containing 3 colums. first: Gen.A, second: Gene.B third: colours
+```{r}
+
+color.vector = as.character(c("darkred", "darkgreen", "turquoise", "yellow", "orange"))
+
+"network" = function(X.partner){
+  edgelist = lapply(1:length(X.partner), function(a){
+    dat_picker = X.partner[[a]]
+    edge.list = data.frame(Gene.A = names(X.partner)[a], Gene.B = dat_picker$genes, colours = color.vector[a])
+  })
+  edge.list = do.call(rbind, edgelist)#combine all goi-dataframes to one.
+}
+
+```
 
 ## SL-parter
 ### SoF
@@ -597,40 +614,48 @@ data.frame("SL genes" = names(SL.partner),
 ```
 
 ## Plotting networks of the Interactions 
-```{r}
-TP53.List = SL.partner[["TP53"]]$genes
-append(TP53.List, "TP53")
-edge.list.TP53 = data.frame(Gene.A = "TP53",Gene.B = TP53.List, colours = "darkred")
 
-TTN.List = SL.partner[["TTN"]]$genes
-edge.list.TTN = data.frame(Gene.A = "TTN",Gene.B = TTN.List, colours = "darkgreen")
-
-MUC16.List = SL.partner[["MUC16"]]$genes
-edge.list.MUC16 = data.frame(Gene.A = "MUC16",Gene.B = MUC16.List, colours = "turquoise")
-
-FAT1.List = SL.partner[["FAT1"]]$genes
-edge.list.FAT1 = data.frame(Gene.A = "FAT1",Gene.B = FAT1.List, colours = "yellow")
-
-CDKN2A.List = SL.partner[["CDKN2A"]]$genes
-edge.list.CDKN2A = data.frame(Gene.A = "CDKN2A",Gene.B = CDKN2A.List, colours = "orange")
-
-
-edge.list = bind_rows(edge.list.TP53,edge.list.TTN,edge.list.MUC16,edge.list.FAT1,edge.list.CDKN2A)
-
-
+Creating a networkplot for the SL-partners
+```{r warning=FALSE}
+#create edge.list(dataframe) of SL partners
+edge.list = network(SL.partner)
+edge.list$colours = as.character(edge.list$colours)
+#define "net" as an igraph objekt 
 net = graph_from_data_frame(edge.list, directed = T)
 
+#three different layouts already provided in the igraph package
 layout1 = layout_with_kk(net)
 layout2 = layout_with_fr(net)
 layout3 = layout_nicely(net)
 
+#plotting the network with several parameters. edge = connections between Genes, vertex = Genes 
+plot(net, layout = layout2, rescale = T, ylim = c(-0.9,1), xlim = c(-0.02,-0.1), edge.color = edge.list$colours , edge.width = 2, edge.arrow.mode = 0, vertex.color = "grey", vertex.size = 8.1, vertex.label.font = 2, vertex.label.degree = -pi/2, vertex.label.color = "black", main = "Network of SL interaction" ) 
 
-plot(net, layout = layout2, rescale = T, ylim = c(-0.9,1), xlim = c(-0.02,-0.1), edge.color = edge.list$colours, edge.arrow.size = 0.1 , edge.width = 2, edge.arrow.mode = 1, vertex.color = "grey", vertex.size = 8.1, vertex.label.font = 2, vertex.label.degree = -pi/2, vertex.label.color = "black" ) 
-
+#adding a legend so the plot
 legend (x = 1.2, y = 1, goi.SL,  fill = c("darkred", "darkgreen", "turquoise", "yellow", "orange")) 
 
 # Cleanup of the environment
-rm(edge.list.CDKN2A,edge.list.FAT1,edge.list.MUC16,edge.list.TP53,edge.list.TTN,layout1,layout2,layout3,CDKN2A.List,FAT1.List,TP53.List,TTN.List,MUC16.List)
+rm(net,edge.list,layout1,layout2,layout3)
+```
+
+creating a network for the SDL-partner 
+
+```{r}
+edge.list = network(SDL.partner) 
+edge.list$colours = as.character(edge.list$colours) #convert the column-class from factor to character
+
+#define "net" as an igraph objekt 
+net= graph_from_data_frame(edge.list, directed = T)
+
+layout = layout_with_fr(net)
+#plotting the network with several parameters. edge = connections between Genes, vertex = Genes 
+plot(net, layout = layout, rescale = T, ylim = c(-0.99,1), xlim = c(-0.02,-0.1), edge.color = edge.list$colours, edge.arrow.size = 0.1 , edge.width = 4, edge.arrow.mode = 1, vertex.color = "grey", vertex.frame.color = "grey", vertex.size = 12, vertex.label.font = 2, vertex.label.degree = -pi/2, vertex.label.color = "black", main = "Network of SDL interaction" ) 
+
+#adding a legend so the plot
+legend (x = 1.2, y = 1, goi.SDL,  fill = c("darkred", "darkgreen", "turquoise", "yellow", "orange")) 
+
+# Cleanup of the environment
+rm(net,edge.list,layout)
          
 ```
 
