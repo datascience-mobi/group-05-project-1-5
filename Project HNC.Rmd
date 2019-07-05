@@ -15,15 +15,7 @@ library(png)
 library(tidyverse)  # data manipulation
 library(cluster)    # clustering algorithms
 library(factoextra) # clustering algorithms & visualization
-library(rstudioapi)
-library(dplyr)
-library(igraph)
-library(intergraph)
-library(sna)
-library(ggnetwork)
-library(plotly)
-library(GGally)
-library(network)
+library(igraph)     # networkplot 
 
 
 '%!in%' <- function(x,y)!('%in%'(x,y)) # Define function "is not in"
@@ -161,9 +153,11 @@ rm(mean.exp.HNC, mean.exp.reference, expression.reference)
 
 Examination of NA values in the copynumber.HNC data
 ```{r}
+# sum up all NAs in each row
 NA.rows = apply(copynumber.HNC,1, function(x) {
           sum(is.na(x))
 })
+#define all rows cotaining missing values
 NA.rows = which( NA.rows > 0)
 length(NA.rows)
 ```
@@ -189,7 +183,7 @@ length(NA.rows.ref)
 ```{r}
 summary(NA.rows == NA.rows.ref)
 ```
-Genes with NA values are the same for the HNC samples compared to all the other samples. Therefore, they can be deleted in the reference data as well.
+Genes with NA values are the same for the HNC samples and all the other samples. Therefore, they can be deleted in the reference data as well.
 
 ```{r}
 copynumber.reference = copynumber.reference[-NA.rows.ref,]
@@ -210,8 +204,7 @@ copynumber.HNC.mean = apply(copynumber.HNC ,1, mean)
 Creating a matrix of HNC copynumber values. The values are normalized to the mean copynumbers of the reference data. For further analysing the matrix is ordered in a decreasing manner.
 ```{r}
 copynumber.HNC.norm = copynumber.HNC.mean - copynumber.ref.mean
-copynumber.HNC.norm = copynumber.HNC.norm[order(copynumber.HNC.norm, decreasing = TRUE )]
-copynumber.HNC.norm = as.data.frame(copynumber.HNC.norm)
+copynumber.HNC.norm = as.data.frame(copynumber.HNC.norm[order(copynumber.HNC.norm, decreasing = TRUE )])
 copynumber.HNC.norm$genes = row.names(copynumber.HNC.norm)
 ```
 Creating a dataframe of all copynumber values. The values are normalized to the mean copynumbers of the reference data.
@@ -264,7 +257,7 @@ colnames(HNC_mutated_genes_df_highest_ordered) = colnames_ordered
 
 Plot mutations in all samples
 ```{r}
-all_mut_plot = ggplot(data = all_mutated_genes_df_highest_30_ordered, aes(x=Gene, y=Freq)) + geom_bar(stat = "identity", width = 0.5, fill="steelblue") +  geom_text(aes(label=Freq), vjust=-0.3, size=2.5,) + theme_grey() + coord_flip()
+all_mut_plot = ggplot(data = all_mutated_genes_df_highest_30_ordered, aes(x=Gene, y=Freq)) + geom_bar(stat = "identity", width = 0.5, fill="steelblue") +  geom_text(aes(label=Freq), vjust=-0.3, size=2.5) + theme_grey() + coord_flip()
 
 all_mut_plot
 ```
@@ -506,7 +499,7 @@ Define function for Spearman correlation test following the daisy model.
 To examine gene pairs A and B which fulfill the criteria of gene co expresssion we performe a Spearman correlation test on the expression data. Therefore the 5 most frequently mutated genes detected in the second milstone are defined as genes A. The correlation test now returns all genes B that correlate to gen A in a significant manner. 
 ```{r}
 'Daisy.Spearman' <- function(input_genes){
-  Daisy_Spearman = lapply(1:length(input_genes), function(m) { # build up a list with the 5 goi, first lapply: goes through the code for each gene A
+  Daisy_Spearman = lapply(1:length(input_genes), function(m) { # build up a list with the 5 goi, first       lapply: goes through the code for each gene A
   goi = input_genes[m]
 
   p.value = sapply(1:nrow(expression), function(a){  # creation of a list with the length of the expression   data, for the reacent goi, go through every gene and calculate cor.test
