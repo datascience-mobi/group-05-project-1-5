@@ -106,7 +106,7 @@ TP53.mut.ID = lapply(1:length(mutation), function(a) {
     return(out)
   })
 
-TP53.not_mut.ID = grep("NA", TP53.mut.ID, value = FALSE) # ID of samples with no TP53 mutation
+TP53.not_mut.ID = grep("NA", TP53.mut.ID) # ID of samples with no TP53 mutation
 TP53.mut.ID = as.integer(TP53.mut.ID[is.na(TP53.mut.ID) == FALSE]) # ID of samples with TP53 mutation
 
 exp.TP53.mut = as.numeric(expression["TP53", TP53.mut.ID]) # expression of TP53 deleterious mutated samples
@@ -438,16 +438,18 @@ rm(mutation.HNC.df, heatmap.genes)
 ```{r}
 goi.lit = data.frame(Gene = c("CDKN2A", "TP53", "CCND1", "EGFR", "PIK3CA", "PTEN", "FAT1", "AJUBA", "NOTCH1", "KMT2D", "NSD1"), Mutation_frequency = c(22, 72, 0.6, 4, 18, 3, 23, 7, 18, 16, 12), CNA_frequency = c(32, 1.4, 25, 11, 21, 4, 8, 1, 4, 0.4, 0.8)) # create dataframe with goi from literature
 
-heatmap_position = lapply(1:nrow(goi.lit), function(a) { 
-  out = grep(goi.lit$Gene[a], rownames(heatmap.data), value = FALSE) # get the position of goi.lit genes in our heatmap
-  return(out[1])
+heatmap_position = sapply(1:nrow(goi.lit), function(a) {
+  position = which(rownames(heatmap.data) == goi.lit$Gene[a])
+  if(length(position) == 0) {position[1] = NA}
+  return(position)
 })
-goi.lit$Heatmap_position = do.call(rbind, heatmap_position) # add heatmap position to goi.lit
+
+goi.lit$Heatmap_position = heatmap_position # add heatmap position to goi.lit
 rm(heatmap_position)
 goi.lit = goi.lit[order(goi.lit$Heatmap_position),]
 goi.lit
 
-goi.SL = rownames(heatmap.data)[1:5] # choose the 5 gene with most frequent deleterious mutation
+goi.SL = rownames(heatmap.data)[1:5] # choose 5 genes with most frequent deleterious mutation
 
 rm(heatmap.data)
 ```
