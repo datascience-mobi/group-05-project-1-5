@@ -218,6 +218,7 @@ Plotting genes with the highest and lowest copynumbers.
 ```{r}
 copynumber.HNC.norm$Group <- ifelse(copynumber.HNC.norm$copynumber.HNC.norm > 0,"high CN","low CN")
 ggplot(copynumber.HNC.norm[c(1:20,23172:23192),],aes(x=genes,y=copynumber.HNC.norm,fill=Group))+geom_bar(stat="identity")+coord_flip()+theme(axis.text.y = element_text(size=6))
+
 ```
 ### Cleanup of the environment
 ```{r}
@@ -267,6 +268,7 @@ Plot mutations in HNC samples
 HNC_mut_plot = ggplot(data = HNC_mutated_genes_df_highest_ordered, aes(x=Gene, y=Freq)) + geom_bar(stat = "identity", width = 0.5, fill="steelblue") + geom_text(aes(label=Freq), vjust=-0.3, size=3.5) + theme_grey()+ coord_flip()
 HNC_mut_plot
 ```
+
 ### Cleanup of the enviroment
 ```{r}
 rm(all_mutations, all_mutated_genes, all_mutated_genes_df, ID_all_highest_30_frequencies, ID_all_highest_frequencies, all_mutated_genes_df_highest_30, all_mutated_genes_df_highest_30_ordered, colnames_ordered, HNC_mutations, HNC_mutated_genes, HNC_mutated_genes_df, ID_HNC_highest_frequencies, HNC_mutated_genes_df_highest_ordered, HNC_mut_plot, all_mut_plot)
@@ -570,17 +572,14 @@ Define function to reduce SL/SDL partner to the most significants
 ```
 Create dataframe containing 3 colums. first: Gen.A, second: Gene.B third: colours
 ```{r}
-
-color.vector = as.character(c("darkred", "darkgreen", "turquoise", "yellow", "orange"))
-
 "network" = function(X.partner){
+  color.vector = as.character(c("darkred", "darkgreen", "turquoise", "yellow", "orange"))
   edgelist = lapply(1:length(X.partner), function(a){
     dat_picker = X.partner[[a]]
     edge.list = data.frame(Gene.A = names(X.partner)[a], Gene.B = dat_picker$genes, colours = color.vector[a])
   })
   edge.list = do.call(rbind, edgelist)#combine all goi-dataframes to one.
 }
-
 ```
 
 ## SL-parter
@@ -670,12 +669,12 @@ rm(net,edge.list,layout)
 
 Reduce SL.parter/SDL.partner to the most significant
 ```{r}
-SL.partner = reduce.partner(SL.partner, "...")
-SDL.partner = reduce.partner(SDL.partner, "...")
+SL.partner.reduced = reduce.partner(SL.partner, "...") # enter gene which wants to be kept
+SDL.partner.reduced = reduce.partner(SDL.partner, "...") # enter gene which wants to be kept
 data.frame("SL genes" = names(SL.partner),
-           SL_partner = sapply(1:length(SL.partner), function(a){nrow(SL.partner[[a]])}),
-           "SDL genes" = names(SL.partner),
-           SDL_partner = sapply(1:length(SDL.partner), function(a){nrow(SDL.partner[[a]])})
+           SL_partner = sapply(1:length(SL.partner.reduced), function(a){nrow(SL.partner.reduced[[a]])}),
+           "SDL genes" = names(SDL.partner),
+           SDL_partner = sapply(1:length(SDL.partner.reduced), function(a){nrow(SDL.partner.reduced[[a]])})
            )
 ```
 
