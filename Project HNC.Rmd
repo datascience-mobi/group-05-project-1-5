@@ -522,66 +522,6 @@ To examine gene pairs A and B which fulfill the criteria of gene co expresssion 
 ```
 The returned list, contains the five genes of interest as elements each containing a dataframe with all genes examined as potential SL partners additional with there calculated p-values.
 
-Define function to converge SL/SDL sets.
-```{r}
-'partner' <- function(input_genes, SoF, functional.examination, coexpression){
-  partner = lapply(1:length(input_genes), function(a) {
-    dat_picker.SoF = SoF[[a]]
-    dat_picker.functional_examination = functional.examination[[a]]
-    dat_picker.coexpression = coexpression[[a]]
-    partnergenes = Reduce(intersect, list(dat_picker.SoF$genes, dat_picker.functional_examination$genes, dat_picker.coexpression$genes))
-    out = data.frame(genes = partnergenes,
-                     SoF = dat_picker.SoF[which(dat_picker.SoF$genes %in% partnergenes),"p_value"],
-                     functional_examination = dat_picker.functional_examination[which(dat_picker.functional_examination$genes %in% partnergenes),"p_value"],
-                     coexpression = dat_picker.coexpression[which(dat_picker.coexpression$genes %in% partnergenes),"p_value"])
-    return(out)
-  })
-  names(partner) = input_genes
-  return(partner)
-}
-```
-Define function to reduce SL/SDL partner to the most significants
-```{r}
-'reduce.partner' <- function(list, keep_element){
-  reduced_partner = lapply(1:length(list), function(a){
-    dat_picker = list[[a]]
-    ordered_data = dat_picker[order(dat_picker$SoF, dat_picker$functional_examination, dat_picker$coexpression),]
-    if (nrow(dat_picker) > 20) { # (1) if length of dat_picker is larger than 20 reduce to the 20 most significant
-      
-      if (keep_element %in% ordered_data$genes) { # (2) if keep_element is in ordered_data then return first 20 entries plus keep_element
-        position.keep_element = grep(keep_element, ordered_data$genes) # search for position of keep_element
-        
-        if (position.keep_element > 20) {
-          out = ordered_data[c(1:19, position.keep_element),] # (3) keep_element is not in the first 20 elements and needs to be extra added
-        } else {
-          out = ordered_data[1:20,] # (3) keep_element is in the first 20 elements and don´t need to be extra added
-        }
-        
-      } else {
-        out = ordered_data[1:20,] # (2) if keep_element is not in ordered_data just return first 20 entries
-      }
-      return(out) # return reduced data
-      
-    } else {
-      return(ordered_data) # (1) return data unreduced if length of dat_picker is smaller than 20
-    }
-  })
-  names(reduced_partner) = names(list)
-  return(reduced_partner)
-}  
-```
-Create dataframe containing 3 colums. first: Gen.A, second: Gene.B third: colours
-```{r}
-"network" = function(X.partner){
-  color.vector = as.character(c("darkred", "darkgreen", "turquoise", "yellow", "orange"))
-  edgelist = lapply(1:length(X.partner), function(a){
-    dat_picker = X.partner[[a]]
-    edge.list = data.frame(Gene.A = names(X.partner)[a], Gene.B = dat_picker$genes, colours = color.vector[a])
-  })
-  edge.list = do.call(rbind, edgelist)#combine all goi-dataframes to one.
-}
-```
-
 ## SL-parter
 SoF
 ```{r}
@@ -611,6 +551,26 @@ Gene coexpression
 SDL.coexpression = Daisy.Spearman(goi.SDL)
 ```
 ## Converging the different SL and SDL sets
+
+Define function to converge SL/SDL sets.
+```{r}
+'partner' <- function(input_genes, SoF, functional.examination, coexpression){
+  partner = lapply(1:length(input_genes), function(a) {
+    dat_picker.SoF = SoF[[a]]
+    dat_picker.functional_examination = functional.examination[[a]]
+    dat_picker.coexpression = coexpression[[a]]
+    partnergenes = Reduce(intersect, list(dat_picker.SoF$genes, dat_picker.functional_examination$genes, dat_picker.coexpression$genes))
+    out = data.frame(genes = partnergenes,
+                     SoF = dat_picker.SoF[which(dat_picker.SoF$genes %in% partnergenes),"p_value"],
+                     functional_examination = dat_picker.functional_examination[which(dat_picker.functional_examination$genes %in% partnergenes),"p_value"],
+                     coexpression = dat_picker.coexpression[which(dat_picker.coexpression$genes %in% partnergenes),"p_value"])
+    return(out)
+  })
+  names(partner) = input_genes
+  return(partner)
+}
+```
+
 ```{r}
 SL.partner = partner(goi.SL, SL.SoF, SL.functional.examination, SL.coexpression)
 SDL.partner = partner(goi.SDL, SDL.SoF, SDL.functional.examination, SDL.coexpression)
@@ -622,6 +582,18 @@ data.frame("SL genes" = names(SL.partner),
 ```
 
 ## Plotting networks of the Interactions 
+
+Create dataframe containing 3 colums. first: Gen.A, second: Gene.B third: colours
+```{r}
+"network" = function(X.partner){
+  color.vector = as.character(c("darkred", "darkgreen", "turquoise", "yellow", "orange"))
+  edgelist = lapply(1:length(X.partner), function(a){
+    dat_picker = X.partner[[a]]
+    edge.list = data.frame(Gene.A = names(X.partner)[a], Gene.B = dat_picker$genes, colours = color.vector[a])
+  })
+  edge.list = do.call(rbind, edgelist)#combine all goi-dataframes to one.
+}
+```
 
 Creating a networkplot for the SL-partners
 ```{r warning=FALSE}
@@ -637,7 +609,7 @@ layout2 = layout_with_fr(net)
 layout3 = layout_nicely(net)
 
 #plotting the network with several parameters. edge = connections between Genes, vertex = Genes 
-plot(net, layout = layout2, rescale = T, ylim = c(-0.9,1), xlim = c(-0.02,-0.1), edge.color = edge.list$colours , edge.width = 2, edge.arrow.mode = 0, vertex.color = "grey", vertex.size = 8.1, vertex.label.font = 2, vertex.label.degree = -pi/2, vertex.label.color = "black", main = "Network of SL interaction" ) 
+plot(net, layout = layout1, rescale = T, ylim = c(-0.9,1), xlim = c(-0.02,-0.1), edge.color = edge.list$colours , edge.width = 2, edge.arrow.mode = 0, vertex.color = "grey", vertex.size = 10, vertex.label.font = 2, vertex.label.color = "black", main = "Network of SL interaction") 
 
 #adding a legend so the plot
 legend (x = 1.2, y = 1, goi.SL,  fill = c("darkred", "darkgreen", "turquoise", "yellow", "orange")) 
@@ -649,28 +621,68 @@ rm(net,edge.list,layout1,layout2,layout3)
 creating a network for the SDL-partner 
 
 ```{r}
-edge.list = network(SDL.partner) 
+edge.list = network(SDL.partner.reduced) 
 edge.list$colours = as.character(edge.list$colours) #convert the column-class from factor to character
 
 #define "net" as an igraph objekt 
 net= graph_from_data_frame(edge.list, directed = T)
 
-layout = layout_with_fr(net)
+#three different layouts already provided in the igraph package
+layout1 = layout_with_kk(net)
+layout2 = layout_with_fr(net)
+layout3 = layout_nicely(net)
+
 #plotting the network with several parameters. edge = connections between Genes, vertex = Genes 
-plot(net, layout = layout, rescale = T, ylim = c(-0.99,1), xlim = c(-0.02,-0.1), edge.color = edge.list$colours, edge.arrow.size = 0.1 , edge.width = 4, edge.arrow.mode = 1, vertex.color = "grey", vertex.frame.color = "grey", vertex.size = 12, vertex.label.font = 2, vertex.label.degree = -pi/2, vertex.label.color = "black", main = "Network of SDL interaction" ) 
+plot(net, layout = layout1, rescale = T, ylim = c(-0.99,1), xlim = c(-0.02,-0.1), edge.color = edge.list$colours, edge.arrow.size = 0.1 , edge.width = 4, edge.arrow.mode = 1, vertex.color = "grey", vertex.frame.color = "grey", vertex.size = 12, vertex.label.font = 2, vertex.label.degree = -pi/2, vertex.label.color = "black", main = "Network of SDL interaction") 
 
 #adding a legend so the plot
 legend (x = 1.2, y = 1, goi.SDL,  fill = c("darkred", "darkgreen", "turquoise", "yellow", "orange")) 
 
 # Cleanup of the environment
-rm(net,edge.list,layout)
+rm(net,edge.list,layout1,layout2,layout3)
          
+```
+
+Define function to reduce SL/SDL partner to the most significants
+We want to reduce the number of partner genes for better plotting without removing genes which are connected to more than one GOI.
+```{r}
+'reduce.partner' <- function(list){ 
+  reduced_partner = lapply(1:length(list), function(a){ # go through every element of SL/SDL partner
+    dat_picker = list[[a]]
+    
+    if (nrow(dat_picker) > 20) { # (1) if length of dat_picker is larger than 20 reduce to the 20 most significant plus the genes we want to keep
+      
+      dat_picker$order = apply(dat_picker[,2:4], 1, mean) # create an extra column with the mean p value of all 3 tests
+      ordered_data = dat_picker[order(dat_picker$order),][,1:4] # order the partner genes after this mean value from most to least significant p value
+      
+      gene_intersect = lapply(1:length(list), function(b){ 
+          as.list(Reduce(intersect, list(dat_picker$genes), list[[b]]$genes)) # search for genes that are partner for more than one GOI
+      })
+      gene_intersect[a] = NULL # remove intersect of the GOI partner genes with itself
+      keep_genes = c(gene_intersect[[1]], gene_intersect[[2]], gene_intersect[[3]], gene_intersect[[4]]) # combine all the genes in a list
+      position = sapply(1:length(keep_genes), function(c){
+        which(as.character(ordered_data$genes) == keep_genes[c])
+      })
+      position = position[which(position > 20)] # partner genes that are already in the first 20 genes don´t need to be chosen
+      
+      if(length(position) > 3) {position = position[1:3]} # if there are still more than 3 extra genes only choose the first 5
+      out = ordered_data[c(1:20, position),]
+      return(out) # return reduced data
+    } else {
+      return(ordered_data) # (2) if length of dat_picker is smaller than 20 return data unreduced 
+    }
+  })
+  names(reduced_partner) = names(list)
+  return(reduced_partner)
+}
 ```
 
 Reduce SL.parter/SDL.partner to the most significant
 ```{r}
-SL.partner.reduced = reduce.partner(SL.partner, "...") # enter gene which wants to be kept
-SDL.partner.reduced = reduce.partner(SDL.partner, "...") # enter gene which wants to be kept
+SL.partner.reduced = reduce.partner(SL.partner)
+SDL.partner.reduced = reduce.partner(SDL.partner)
+SDL.partner.reduced[[3]][24,] = SDL.partner[[3]][which(SDL.partner[[3]]$genes == "FOSL1"),]
+
 data.frame("SL genes" = names(SL.partner),
            SL_partner = sapply(1:length(SL.partner.reduced), function(a){nrow(SL.partner.reduced[[a]])}),
            "SDL genes" = names(SDL.partner),
