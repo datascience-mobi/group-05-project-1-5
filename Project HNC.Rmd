@@ -23,6 +23,9 @@ library(tidyverse)  # data manipulation
 library(cluster)    # clustering algorithms
 library(factoextra) # clustering algorithms & visualization
 library(igraph)     # networkplot
+library(rstudioapi)
+library(caTools)
+library(pscl)
 ```
 ```{r eval = FALSE, include = FALSE}
 # Set working directiory
@@ -758,7 +761,9 @@ network(SDL.partner.reduced,4,"grey","grey",12,"Network of SDL interaction (redu
 ```
 
 # 4. Mutation prediction via logistical regression
+
 ## Prepare data for regression model
+
 Reduce all genes to them of which we have expression, copynumber and knockdown data.
 ```{r}
 regression.genes = Reduce(intersect, list(rownames(expression), rownames(copynumber), rownames(kd.ceres)))
@@ -784,14 +789,9 @@ regression.data = lapply(1:length(regression.genes), function(a) {
 regression.data = do.call(rbind, regression.data)
 rm(regression.genes, regression.expression, regression.copynumber, regression.kd.ceres)
 ```
-## train and test regression model
 
+## Train and test regression model
 ```{r}
-
-
-library(rstudioapi)
-library(caTools)
-
 set.seed(123) 
 split = sample.split(regression.data$mutation, SplitRatio = 0.8)
 training.set.rg = subset(regression.data, split == TRUE)
@@ -802,20 +802,14 @@ summary(train.model)
 
 anova(train.model, test="Chisq")
 
-
-library(pscl)
 pR2(train.model)
 
 model.results = predict(train.model, newdata = subset(testing.set.rg, select=c("expression","copynumber","kockdown")), type = "response") 
 model.results = ifelse(model.results > 0.5,1,0)
-
 ```
 
-## compare different variable input 
-
+## Compare different variable input
 ```{r}
-
-model.results. = predict(train.model, newdata = subset(testing.set.rg, select=c("expression","copynumber","kockdown")), type = "response") # Hier wollte ich noch fragen welche Kombo ausprobiert werden soll
-model.results = ifelse(model.results > 0.5,1,0)
-
+model.results.knockdown = predict(train.model, newdata = subset(testing.set.rg, select="kockdown"), type = "response") # Hier wollte ich noch fragen welche Kombo ausprobiert werden soll
+model.results = ifelse(model.results.knockdown > 0.5,1,0)
 ```
