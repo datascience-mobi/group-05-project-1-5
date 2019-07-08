@@ -288,6 +288,26 @@ rownames(HNC_mutated_genes_df_highest_ordered) = 1:27
 colnames(HNC_mutated_genes_df_highest_ordered) = colnames_ordered
 ```
 
+### Clean mutation from unnecessary data 
+```{r}
+'mutation.clean' <- function(data){
+  cleaned_data = lapply(1:length(data), function(a){
+    dat_picker = data[[a]]
+    dat_picker = dat_picker[,c("Hugo_Symbol","isDeleterious")]
+    dat_picker = dat_picker[which(dat_picker$isDeleterious == TRUE),]
+    return(dat_picker)
+  })
+}
+all.IDs = names(mutation)
+mutation = mutation.clean(mutation)
+names(mutation) = all.IDs
+rm(all.IDs)
+
+mutation.HNC = mutation.clean(mutation.HNC)
+names(mutation.HNC) = ID
+```
+
+
 ### Plotting mutation frequencies of all samples and of HNC samples
 
 Plot mutations in all samples
@@ -764,5 +784,38 @@ regression.data = lapply(1:length(regression.genes), function(a) {
 regression.data = do.call(rbind, regression.data)
 rm(regression.genes, regression.expression, regression.copynumber, regression.kd.ceres)
 ```
-## train regression model
-## test regression model and compare different variable input
+## train and test regression model
+
+```{r}
+
+
+library(rstudioapi)
+library(caTools)
+
+set.seed(123) 
+split = sample.split(regression.data$mutation, SplitRatio = 0.8)
+training.set.rg = subset(regression.data, split == TRUE)
+testing.set.rg = subset(regression.data, split == FALSE)
+
+train.model = glm(mutation~., family = binomial(link="logit"), data=training.set.rg)
+summary(train.model)
+
+anova(train.model, test="Chisq")
+
+
+library(pscl)
+pR2(train.model)
+
+model.results = predict(train.model, newdata = subset(testing.set.rg, select=c("expression","copynumber","kockdown")), type = "response") 
+model.results = ifelse(model.results > 0.5,1,0)
+
+```
+
+## compare different variable input 
+
+```{r}
+
+model.results. = predict(train.model, newdata = subset(testing.set.rg, select=c("expression","copynumber","kockdown")), type = "response") # Hier wollte ich noch fragen welche Kombo ausprobiert werden soll
+model.results = ifelse(model.results > 0.5,1,0)
+
+```
