@@ -809,5 +809,5 @@ model.results = ifelse(model.results > 0.5,1,0)
 ## Compare different variable input
 ```{r}
 model.results.knockdown = predict(train.model, newdata = subset(testing.set.rg, select="kockdown"), type = "response") # Hier wollte ich noch fragen welche Kombo ausprobiert werden soll
-model.results = ifelse(model.results.knockdown > 0.5,1,0)
+model.results.knockdown = ifelse(model.results.knockdown > 0.5,1,0)
 ```
