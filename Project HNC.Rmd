@@ -9,7 +9,7 @@ output: html_document
 #Global options
 knitr::opts_chunk$set(echo = TRUE,
                       cache = TRUE,
-                      comment=NA,
+                      comment = NA,
                       message = FALSE,
                       warning = FALSE)
 
@@ -462,7 +462,7 @@ goi.sdl = comb.ex.cna[which(comb.ex.cna$y_kmeans == comb.ex.cna[1,4]),]
 goi.sdl = goi.sdl[order(goi.sdl$expression,decreasing=TRUE),]
 kable(head(goi.sdl))
 
-goi.SDL = rownames(goi.sdl)[1:5]
+goi.SDL = as.character(goi.sdl$genes[1:5])
 rm(emp, i, km.genes, y_kmeans, kmeans, km.copynumber, km.data, km.expression, comb.ex.cna) # Clean enviroment
 ```
 
