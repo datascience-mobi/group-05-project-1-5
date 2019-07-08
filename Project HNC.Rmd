@@ -26,6 +26,7 @@ Head and neck cancer is defined as a group of cancers, concerning the mouth, nos
 
 
 ![](images/HNC_Kopf.png)
+
 In the century of next generation sequencing, the genome became an interesting target for scientists.Approaches that directly affect important oncogenes often fail due to the fact that these genes play an important role in healthy cells.The researchers in our paper investigated synthetic lethality and synthetic dosage lethality that uses gene interactions to affect tumorous proliferation. Synthetic letahlity is a gene interaction in which single-gene defects are compatible with cell viability, but the combination of gene effects results in cell death.Synthetic dosage lethality occurs, when the overexpression of one gene is combined with the knockout of another gene.
 
 ![](images/Daisy.png)
@@ -585,22 +586,26 @@ data.frame("SL genes" = names(SL.partner),
 
 ## Plotting networks of the Interactions 
 
-Create dataframe containing 3 colums. first: Gen.A, second: Gene.B third: colours
+Creation of a function for transforming given data into a format iGraph can work with and plotting of the network
 ```{r}
 'network' = function(X.partner,width,node.color,frame.color,node.size,Titel,label){#(SL/SDL.partner,number,string,string,number,string,NA oder names(plot))
-  color.vector = c("darkred", "darkgreen", "turquoise", "yellow", "orange")
+  
+  color.vector = c("darkred", "darkgreen", "turquoise", "yellow", "orange") #define colours
+# transform data into a dataframe with 3 colums for each GOI  
   edgelist = lapply(1:length(X.partner), function(a){
     dat_picker = X.partner[[a]]
-    edge.list = data.frame(Gene.A = names(X.partner)[a], Gene.B = dat_picker$genes, colours = color.vector[a])
+    edge.list = data.frame(Gene.A = names(X.partner)[a], Gene.B = dat_picker$genes, colours = color.vector[a]) #the 3 columns
   })
   edge.list = do.call(rbind, edgelist)#combine all goi-dataframes to one.
-  edge.list$colours = as.character(edge.list$colours)
+  edge.list$colours = as.character(edge.list$colours) #after the lapply, column "colours" has class 'factor'. For the plottingfunction it must be character 
   
-  net = graph_from_data_frame(edge.list, directed = T)
-  layout1 = layout_with_kk(net) 
-  
+  net = graph_from_data_frame(edge.list, directed = T) # tranform the dataframe into an iGraph object
+  layout1 = layout_with_kk(net)                        # given layout
+
+#plotting parameters are defined. vertex= Genes edges = interactions 
   plot(net, layout = layout1, rescale = T, ylim = c(-0.9,1), xlim = c(-0.02,-0.1), edge.color = edge.list$colours , edge.width = width, edge.arrow.mode = 0, vertex.color = node.color,vertex.frame.color = frame.color, vertex.size = node.size, vertex.label.font = 2, vertex.label.color = "black", main = Titel, vertex.label = label)
-  
+
+#adding a legend to the plot
   legend (x = 1.2, y = 1, goi.SL,  fill = c("darkred", "darkgreen", "turquoise", "yellow", "orange"))
 }
 
@@ -608,11 +613,11 @@ Create dataframe containing 3 colums. first: Gen.A, second: Gene.B third: colour
 
 
 Creating a networkplot for the SL-partners
-```{r warning=FALSE}
+```{r}
 network(SL.partner,2,"grey","black",8.1,"Network of SL interaction", NA )
 ```
 
-creating a network for the SDL-partner 
+Creating a network for the SDL-partner 
 
 ```{r}
 network(SDL.partner,2,"grey","black",8.1,"Network of SDL interaction", NA )
@@ -667,11 +672,13 @@ data.frame("SL genes" = names(SL.partner),
 ```
 
 Plotting SL/SDL partner network with reduced number of partner
-SL interaction with reduced partners
+
+SL interaction plot with reduced partners
 ```{r}
 network(SL.partner.reduced,4,"grey","grey",12,"Network of SL interaction (reduced)", names(plot) )
 ```
-SDL interaction with reduced partners
+
+SDL interaction plot with reduced partners
 ```{r}
 network(SDL.partner.reduced,4,"grey","grey",12,"Network of SDL interaction (reduced)", names(plot) )
 ```
