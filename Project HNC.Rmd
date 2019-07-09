@@ -33,7 +33,7 @@ root.dir = dirname(rstudioapi::getSourceEditorContext()$path)
 ```
 
 # General Introduction
-Head and neck cancer is defined as a group of cancers, concerning the mout nose and throat. With over 90%, Squamous cell carcinoma is the most common type in HNC patients. With 5.5 million affected people in 2015 it is the seventh most frequent cancer and the ninth most frequent cause of death. (Information required)
+Head and neck cancer is defined as a group of cancers, concerning the mouth, nose and throat. With over 90%, Squamous cell carcinoma is the most common type in HNC patients. With 5.5 million affected people in 2015 it is the seventh most frequent cancer and the ninth most frequent cause of death. (Information required)
 
 ![](images/HNC_Kopf.png)
 
