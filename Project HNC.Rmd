@@ -1,33 +1,45 @@
 ---
 title: "Project Head and Neck Cancer"
 author: "Nils Mechtel, Tobias Hub, Niklas Urbanek, Pascal Poc"
-date: "6 Mai 2019"
+date: "8 July 2019"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-root.dir = dirname(rstudioapi::getSourceEditorContext()$path)
+```{r setup, include = FALSE}
+#Global options
+knitr::opts_chunk$set(echo = TRUE,
+                      cache = TRUE,
+                      comment = NA,
+                      message = FALSE,
+                      warning = FALSE)
+
+# Library packages
+library(knitr)      # RMarkdown
 library(ggplot2)
-library(ggpubr) # histograms
+library(ggpubr)     # histograms
 theme_set(theme_pubr())
-library(png)
+library(png)        # read, write and display images
 library(tidyverse)  # data manipulation
 library(cluster)    # clustering algorithms
 library(factoextra) # clustering algorithms & visualization
-library(igraph)     # networkplot 
-
-
-'%!in%' <- function(x,y)!('%in%'(x,y)) # Define function "is not in"
+library(igraph)     # networkplot
+library(rstudioapi)
+library(caTools)
+library(pscl)
+```
+```{r eval = FALSE, include = FALSE}
+# Set working directiory
+root.dir = dirname(rstudioapi::getSourceEditorContext()$path)
 ```
 
 # General Introduction
-Head and neck cancer is defined as a group of cancers, concerning the mouth, nose and throat. With over 90%, Squamous cell carcinoma is the most common type in HNC patients.With 5.5 million affected people in 2015 it is the seventh most frequent cancer and the ninth most frequent cause of death. (Information required)
-
+Head and neck cancer is defined as a group of cancers, concerning the mouth, nose and throat. With over 90%, Squamous cell carcinoma is the most common type in HNC patients. With 5.5 million affected people in 2015 it is the seventh most frequent cancer and the ninth most frequent cause of death. (Information required)
 
 ![](images/HNC_Kopf.png)
 
-In the century of next generation sequencing, the genome became an interesting target for scientists.Approaches that directly affect important oncogenes often fail due to the fact that these genes play an important role in healthy cells.The researchers in our paper investigated synthetic lethality and synthetic dosage lethality that uses gene interactions to affect tumorous proliferation. Synthetic letahlity is a gene interaction in which single-gene defects are compatible with cell viability, but the combination of gene effects results in cell death.Synthetic dosage lethality occurs, when the overexpression of one gene is combined with the knockout of another gene.
+
+In the century of next generation sequencing, the genome became an interesting target for scientists. Approaches that directly affect important oncogenes often fail due to the fact that these genes play an important role in healthy cells. The researchers in our paper investigated synthetic lethality and synthetic dosage lethality that uses gene interactions to affect tumorous proliferation. Synthetic letahlity is a gene interaction in which single-gene defects are compatible with cell viability, but the combination of gene effects results in cell death. Synthetic dosage lethality occurs, when the overexpression of one gene is combined with the knockout of another gene.
+
 
 ![](images/Daisy.png)
 
@@ -63,43 +75,50 @@ mutation.HNC = mutation[ID]
 
 ## Expression analysis
 
-### Checking fo NAs
+
+### Checking for NAs
 ```{r}
 sum(is.na(expression) == TRUE)
 ```
-There are no NAs in the expression data.
+Result: There are no NAs in the expression data.
 
 ### Examine expression values
 
-Comparing mean gene expression of all samples with just HNC samples.
+Create a reference group of expression data
 ```{r}
+'%!in%' = function(x,y)!('%in%'(x,y)) # Define function "is not in"
+
 expression.reference = expression[ , which(colnames(expression) %!in% ID)]
+```
+and calculate their mean.
+```{r}
 mean.exp.reference = apply(expression.reference, 1, mean)
 mean.exp.HNC = apply(expression.HNC, 1, mean)
 ```
-Checking if expression is normally distributed
+Firstly, we want to check if the gene expressions of the HNC samples and the reference group are normally distributed.
 ```{r}
-HNC = data.frame(expression_values = mean.exp.HNC, sample = "HNC")
-reference = data.frame(expression_values = mean.exp.reference, sample = "reference")
-mean.expression = rbind(reference, HNC)
+HNC = data.frame(expression_values = mean.exp.HNC, sample = "HNC") 
+Reference = data.frame(expression_values = mean.exp.reference, sample = "Reference")
+mean.expression = rbind(Reference, HNC)
 
 ggqqplot(mean.expression, x = "expression_values",
    color = "sample",
-   palette = c("#FC4E07", "#0073C2FF"),
+   palette = c("#FC4E07", "#0073C2FF"), # red and blue
    ggtheme = theme_pubclean())
-
-rm(HNC, reference, mean.expression)
 ```
-Result: Gene espression is not normally distributed.
 
-Applying Wilcoxon rank sum test because expression is not normally distributed
+Result: Gene espression is neither in HNC samples nor in reference samples normally distributed.
+
+Then we compare HNC and reference group gene expression using a statistical test. A Wilcoxon rank sum test must be applied because the expression is not normally distributed.
 ```{r}
 wilcox.test(mean.exp.HNC, mean.exp.reference)
 ```
-Result: Mean gene expression differs between HNC samples and all samples significantly.
+Result: Mean gene expression differs between HNC and reference group samples significantly.
 
-Comparing mean TP53 gene expression of all samples with and without deleterious TP53 mutation
+
+Next we check if the gene expression differs whether a gene has a deleterious mutation or not. AS an example, we compare the mean TP53 gene expression of all samples with and without deleterious TP53 mutation.
 ```{r}
+# Get the ID of samples whith and without deleterious mutation
 TP53.mut.ID = lapply(1:length(mutation), function(a) {
   dat_picker = mutation[[a]]
   dat_picker = dat_picker[which(dat_picker$isDeleterious == TRUE),]
@@ -110,43 +129,62 @@ TP53.mut.ID = lapply(1:length(mutation), function(a) {
 TP53.not_mut.ID = grep("NA", TP53.mut.ID) # ID of samples with no TP53 mutation
 TP53.mut.ID = as.integer(TP53.mut.ID[is.na(TP53.mut.ID) == FALSE]) # ID of samples with TP53 mutation
 
+# Create two vectors of expression values
 exp.TP53.mut = as.numeric(expression["TP53", TP53.mut.ID]) # expression of TP53 deleterious mutated samples
 exp.TP53.not_mut = as.numeric(expression["TP53", TP53.not_mut.ID]) # expression of TP53 not deleterious mutated samples
 ```
-Applying Wilcoxon rank sum test because expression is not normally distributed
+Compare the expression values by applying Wilcoxon rank sum test.
 ```{r}
 wilcox.test(exp.TP53.mut , exp.TP53.not_mut)
-rm(TP53.mut.ID, TP53.not_mut.ID, exp.TP53.mut, exp.TP53.not_mut)
 ```
 Result: Gene expression of TP53 as an example gene varies significantly whether the samples has or has no deleterious TP53 mutation.
 
-Checking how the expression values are distributed
+At last, we plot a histogram to check how the expression values are distributed.
 ```{r}
-# histogram
-gghistogram(as.data.frame(mean.exp.HNC), x = "mean.exp.HNC", xlab = "expression value", bins = 60,
-            fill = "#0073C2FF", color = "#0073C2FF",
-            add = "mean", rug = TRUE)
+gghistogram(as.data.frame(mean.exp.HNC),
+            x = "mean.exp.HNC",
+            xlab = "expression value",
+            bins = 60,
+            fill = "#0073C2FF",
+            color = "#0073C2FF",
+            add = "mean",
+            rug = TRUE)
 ```
-### Normalize expression data from HNC samples
+
+
+Result: The most genes have expression values around 0.
+
+
+
+### Plot the 20 most under- and overexpressed genes of HNC samples.
+For this we need to normalize the expression data from HNC samples
 ```{r}
 expr.HNC.norm = as.data.frame(apply(expression.HNC, 2, function(x) {
   x - mean.exp.reference
 }))
 ```
-### Plotting the 20 most under- and overexpressed genes of the first sample
+and calculate the mean of the normalesid expression values.
 ```{r}
 mean.expr.HNC.norm = as.data.frame(apply(expr.HNC.norm, 1, mean))
-barplot.data = data.frame(Genes=rownames(expr.HNC.norm),Values=mean.expr.HNC.norm)
+```
+
+Then create a dataframe with needed information for the barplot
+```{r}
+barplot.data = data.frame(Genes=rownames(expr.HNC.norm),
+                          Values=mean.expr.HNC.norm)
 names(barplot.data) = c("Genes", "Values")
-barplot.data$Group<-ifelse(barplot.data$Values>0,"overexpressed","underexpressed")
+barplot.data$Group = ifelse(barplot.data$Values>0,"overexpressed","underexpressed")
 barplot.data = barplot.data[order(barplot.data$Values),]
 barplot.data = barplot.data[c(1:19, (nrow(barplot.data)-20):nrow(barplot.data)),]
-ggplot(barplot.data,aes(x=Genes,y=Values,fill=Group))+geom_bar(stat="identity")+coord_flip()+theme(axis.text.y = element_text(size=6))
-rm(mean.expr.HNC.norm, barplot.data)
 ```
+and plot this dataframe.
+```{r}
+ggplot(barplot.data,aes(x=Genes,y=Values,fill=Group))+geom_bar(stat="identity")+coord_flip()+theme(axis.text.y = element_text(size=6))
+```
+
 ### Cleanup of the enviroment
 ```{r}
-rm(mean.exp.HNC, mean.exp.reference, expression.reference)
+rm(HNC, Reference, mean.expression, TP53.mut.ID, TP53.not_mut.ID, exp.TP53.mut, exp.TP53.not_mut, mean.expr.HNC.norm, barplot.data, mean.exp.HNC, mean.exp.reference, expression.reference)
 ```
 
 ## Copynumber Alteration
@@ -162,7 +200,7 @@ NA.rows = apply(copynumber.HNC,1, function(x) {
 NA.rows = which( NA.rows > 0)
 length(NA.rows)
 ```
-Only 107 out of 23299 gens have NA values and are therefore deleted from the copynumber.HNC matrix
+Only 107 out of 23299 gens have NA values and are therefore deleted from the copynumber.HNC dataframe
 ```{r}
 copynumber.HNC = copynumber.HNC[-NA.rows,]
 dim(copynumber.HNC)
@@ -198,16 +236,9 @@ For the HNC normalisation we will use the mean CN value per gen of the reference
 
 ```{r}
 copynumber.ref.mean = apply(copynumber.reference,1, mean)
-
 copynumber.HNC.mean = apply(copynumber.HNC ,1, mean)
 ```
 
-Creating a matrix of HNC copynumber values. The values are normalized to the mean copynumbers of the reference data. For further analysing the matrix is ordered in a decreasing manner.
-```{r}
-copynumber.HNC.norm = copynumber.HNC.mean - copynumber.ref.mean
-copynumber.HNC.norm = as.data.frame(copynumber.HNC.norm[order(copynumber.HNC.norm, decreasing = TRUE )])
-copynumber.HNC.norm$genes = row.names(copynumber.HNC.norm)
-```
 Creating a dataframe of all copynumber values. The values are normalized to the mean copynumbers of the reference data.
 ```{r}
 cna.HNC.norm = as.data.frame(apply(copynumber.HNC, 2, function(x) {
@@ -215,15 +246,20 @@ cna.HNC.norm = as.data.frame(apply(copynumber.HNC, 2, function(x) {
 }))
 ```
 
+Creating a dataframe of HNC copynumber values. The values are normalized to the mean copynumbers of the reference data. For further analysing the dataframe is ordered in a decreasing manner.
+```{r}
+Values = copynumber.HNC.mean - copynumber.ref.mean
+copynumber.HNC.norm = data.frame(values = sort(Values, decreasing = TRUE), genes = row.names(copynumber.HNC))
+copynumber.HNC.norm$Group = ifelse(copynumber.HNC.norm$values > 0,"high CN","low CN")
+```
+
 Plotting genes with the highest and lowest copynumbers.
 ```{r}
-copynumber.HNC.norm$Group <- ifelse(copynumber.HNC.norm$copynumber.HNC.norm > 0,"high CN","low CN")
-ggplot(copynumber.HNC.norm[c(1:20,23172:23192),],aes(x=genes,y=copynumber.HNC.norm,fill=Group))+geom_bar(stat="identity")+coord_flip()+theme(axis.text.y = element_text(size=6))
-
+ggplot(copynumber.HNC.norm[c(1:20,23172:23192),],aes(x=genes,y=values,fill=Group))+geom_bar(stat="identity")+coord_flip()+theme(axis.text.y = element_text(size=6))
 ```
 ### Cleanup of the environment
 ```{r}
-rm(NA.rows, NA.rows.ref, copynumber.HNC.norm, copynumber.HNC.mean, copynumber.ref.mean, copynumber.reference)
+rm(NA.rows, NA.rows.ref, copynumber.HNC.norm, copynumber.HNC.mean, copynumber.ref.mean, copynumber.reference, Values)
 ```
 
 ## Mutation
@@ -254,6 +290,26 @@ HNC_mutated_genes_df_highest_ordered = HNC_mutated_genes_df[ID_HNC_highest_frequ
 rownames(HNC_mutated_genes_df_highest_ordered) = 1:27
 colnames(HNC_mutated_genes_df_highest_ordered) = colnames_ordered
 ```
+
+### Clean mutation from unnecessary data 
+```{r}
+'mutation.clean' <- function(data){
+  cleaned_data = lapply(1:length(data), function(a){
+    dat_picker = data[[a]]
+    dat_picker = dat_picker[,c("Hugo_Symbol","isDeleterious")]
+    dat_picker = dat_picker[which(dat_picker$isDeleterious == TRUE),]
+    return(dat_picker)
+  })
+}
+all.IDs = names(mutation)
+mutation = mutation.clean(mutation)
+names(mutation) = all.IDs
+rm(all.IDs)
+
+mutation.HNC = mutation.clean(mutation.HNC)
+names(mutation.HNC) = ID
+```
+
 
 ### Plotting mutation frequencies of all samples and of HNC samples
 
@@ -321,8 +377,8 @@ wilcox.test(mean.kd.ceres, mean.kd.ceres.reference)
 Resultat Fehlt
 ### Example EGFR
 ```{r}
-# Transposition of matrix esgene1
-esgeneT <- as.data.frame(t(esgene1))
+# Transposition of dataframe esgene1
+esgeneT = as.data.frame(t(esgene1))
 summary(esgeneT$EGFR)
 ```
 
@@ -358,7 +414,7 @@ km.data = lapply(1:length(ID), function(x) {
 })
 
 comb.ex.cna = do.call(rbind, km.data)
-comb.ex.cna <- comb.ex.cna[which(comb.ex.cna$copynumber >= 1 & comb.ex.cna$expression >=quantile(comb.ex.cna$expression,0.95)),]
+comb.ex.cna = comb.ex.cna[which(comb.ex.cna$copynumber >= 1 & comb.ex.cna$expression >=quantile(comb.ex.cna$expression,0.95)),]
 
 #Plotting of normalized expression valuess against CNA data. 
 ggplot(comb.ex.cna[,2:3], aes(x= expression, y= copynumber , color = "smooth")) + geom_point()
@@ -402,17 +458,20 @@ comb.ex.cna = comb.ex.cna[order(comb.ex.cna$expression,decreasing =TRUE),]
 #Filtering of the most expressed and alterated
 goi.sdl = comb.ex.cna[which(comb.ex.cna$y_kmeans == comb.ex.cna[1,4]),]
 
-#sort matrix 
-goi.sdl = goi.sdl[order(goi.sdl$expression,decreasing=TRUE),] 
-head(goi.sdl)
+#sort dataframe 
+goi.sdl = goi.sdl[order(goi.sdl$expression,decreasing=TRUE),]
+kable(head(goi.sdl))
 
-goi.SDL = as.character(goi.sdl$genes[1:5]) # !goi.SDL need to be a vector of 5 gene names for milestone 3!
+goi.SDL = as.character(goi.sdl$genes[1:5])
 rm(emp, i, km.genes, y_kmeans, kmeans, km.copynumber, km.data, km.expression, comb.ex.cna) # Clean enviroment
 ```
-## Investigate high frequencies of deleterious mutations
+
+## Investigate high frequencies of deleterious mutations SL GOI
+
+Create a dataframe with data for the heatmap.
 ```{r}
 mutation.HNC.df = do.call(rbind, mutation.HNC) # all mutation data of HNC samples in one dataframe
-heatmap.genes = as.data.frame(table(mutation.HNC.df$Hugo_Symbol)) # dataframe with all mutated genes in HNC samples once
+heatmap.genes = as.data.frame(table(mutation.HNC.df$Hugo_Symbol)) # dataframe with all mutated genes in HNC samples just once
 
 heatmap.data = as.data.frame(sapply(1:(length(ID)), function(a) {
   out = ifelse(heatmap.genes$Var1 %in% mutation.HNC[[a]]$Hugo_Symbol, 1, 0) # per HNC sample: every gene which is mutated gets a 1, otherwise a 0
@@ -429,37 +488,50 @@ heatmap.data = heatmap.data[order(-heatmap.data$sum), 1:27]
 
 # heatmap of the most frequently mutated genes in HNC samples
 heatmap(data.matrix(heatmap.data)[1:40,], Rowv=NA, Colv=NA, col = c("lightgrey", "tomato2"), scale="column", cexRow = 0.5, cexCol = 0.8, main = "Most frequently mutated genes in HNC samples")
-
-# clean up the enviroment
-rm(mutation.HNC.df, heatmap.genes)
 ```
 
+Result: TP53, FAT1, CDKN2A, KRT3 and CASP8 are the 5 most frequently mutated genes in our HNC samples
+
+According to Leemans et al. (2018) these are frequent mutations in HNC:
 ![](images/frequent_mutations_HNC.png)
 
-```{r}
-goi.lit = data.frame(Gene = c("CDKN2A", "TP53", "CCND1", "EGFR", "PIK3CA", "PTEN", "FAT1", "AJUBA", "NOTCH1", "KMT2D", "NSD1"), Mutation_frequency = c(22, 72, 0.6, 4, 18, 3, 23, 7, 18, 16, 12), CNA_frequency = c(32, 1.4, 25, 11, 21, 4, 8, 1, 4, 0.4, 0.8)) # create dataframe with goi from literature
+Leemans, C. R. et al. (2018). The molecular landscape of head and neck cancer. Nat. Rev. Cancer 18, 269-282.
 
-heatmap_position = sapply(1:nrow(goi.lit), function(a) {
+
+Compare our SL GOI with genes from literature.
+```{r}
+goi.lit = data.frame(Gene = c("CDKN2A", "TP53", "CCND1", "EGFR", "PIK3CA", "PTEN", "FAT1", "AJUBA", "NOTCH1", "KMT2D", "NSD1"), "Mutation frequency" = c(22, 72, 0.6, 4, 18, 3, 23, 7, 18, 16, 12), "CNA frequency" = c(32, 1.4, 25, 11, 21, 4, 8, 1, 4, 0.4, 0.8)) # create dataframe with goi from literature
+
+heatmap_position = sapply(1:nrow(goi.lit), function(a) { # search for the position of goi.lit in mutated genes of HNC samples
   position = which(rownames(heatmap.data) == goi.lit$Gene[a])
-  if(length(position) == 0) {position[1] = NA}
+  if(length(position) == 0) {position = NA} # if gene is not part of the genes mutated in HNC samples its position is replaced with NA
   return(position)
 })
 
-goi.lit$Heatmap_position = heatmap_position # add heatmap position to goi.lit
-rm(heatmap_position)
-goi.lit = goi.lit[order(goi.lit$Heatmap_position),]
-goi.lit
+goi.lit$"Heatmap position" = heatmap_position # add heatmap position to goi.lit
+rownames(goi.lit) = goi.lit$Gene
+goi.lit$Gene = NULL
+goi.lit = goi.lit[order(goi.lit$"Heatmap position"),]
+kable(goi.lit) # show a table of goi.lit
+```
 
-goi.SL = rownames(heatmap.data)[1:5] # choose 5 genes with most frequent deleterious mutation
+Because our most frequent mutated genes almost aproximately match with frequent mutations from literature we choose the 5 genes with most frequent mutations in HNC samples.
+```{r}
+goi.SL = rownames(heatmap.data)[1:5]
+```
 
-rm(heatmap.data)
+Clean up of the enviroment
+```{r}
+rm(mutation.HNC.df, heatmap.genes, heatmap.data, heatmap_position)
 ```
 
 # 3. Find SL/SDL partner
-## Define functions for SL/SDL partner search
-Define function for Wilcoxon sum rank test following the daisy model. (Bonferroni correction needs to be added)
+
+## SL/SDL partner search following the daisy model
+
+To examine gene pairs A and B which fulfill the criteria of SoF and functional examination we performe a Wilcoxon rank sum test on copynumber or CERES knockdown data. We have 5 inactive genes (goi.SL) and 5 overactive genes (goi.SDL) which are defined as genes A. The Wilcoxon rank sum test now returns all genes B which pass the test in a significant manner (p<0.05). 
 ```{r}
-'Daisy.Wilcox' <- function(input_genes,input_data, inactive_overactive, less_greater){
+'Daisy.Wilcox' = function(input_genes,input_data, inactive_overactive, less_greater){
   Daisy_Wilcox = lapply(1:length(input_genes), function(m) {
   goi = input_genes[m] # set 1 of 5 goi
   # depending on SL or SDL partner search gene B needs to be inactive (SL) or overactive (SDL)
@@ -499,11 +571,10 @@ Define function for Wilcoxon sum rank test following the daisy model. (Bonferron
   return(Daisy_Wilcox)
 }
 ```
-Define function for Spearman correlation test following the daisy model.
 
-To examine gene pairs A and B which fulfill the criteria of gene co expresssion we performe a Spearman correlation test on the expression data. Therefore the 5 most frequently mutated genes detected in the second milstone are defined as genes A. The correlation test now returns all genes B that correlate to gen A in a significant manner. 
+To examine gene pairs A and B which fulfill the criteria of gene co expresssion we performe a Spearman correlation test on the expression data. We have 5 inactive genes (goi.SL) and 5 overactive genes (goi.SDL) which are defined as genes A The correlation test now returns all genes B that correlate to gene A in a significant manner (p<0.05).
 ```{r}
-'Daisy.Spearman' <- function(input_genes){
+'Daisy.Spearman' = function(input_genes){
   Daisy_Spearman = lapply(1:length(input_genes), function(m) { # build up a list with the 5 goi, first       lapply: goes through the code for each gene A
   goi = input_genes[m]
 
@@ -523,65 +594,68 @@ To examine gene pairs A and B which fulfill the criteria of gene co expresssion 
   return(Daisy_Spearman)
 }
 ```
-The returned list, contains the five genes of interest as elements each containing a dataframe with all genes examined as potential SL partners additional with there calculated p-values.
 
-## SL-parter
+
+Both functions return a list, which contains the five genes of interest, each containing a dataframe with all genes examined as potential SL/SDL partners plus their calculated p-values.
+
+
+### SL-parter
 SoF
 ```{r}
-SL.SoF = Daisy.Wilcox(goi.SL, copynumber, inactive_overactive = 0, less_greater = 1) # SoF, one sided Wilcoxon rank test, alternative = "greater"
+SL.SoF = Daisy.Wilcox(goi.SL, copynumber, inactive_overactive = 0, less_greater = 1) # SoF, inactive, one sided Wilcoxon rank test, alternative = "greater"
 ```
 Functional examination
 ```{r}
-SL.functional.examination = Daisy.Wilcox(goi.SL, kd.ceres, inactive_overactive = 0, less_greater = 0) # Functional examination, one sided Wilcoxon rank test, alternative = "less"
+SL.functional.examination = Daisy.Wilcox(goi.SL, kd.ceres, inactive_overactive = 0, less_greater = 0) # Functional examination, inactive, one sided Wilcoxon rank test, alternative = "less"
 ```
 Gene coexpression
-```{r warning=FALSE}
-# Standardabweichung is NULL
+```{r}
 SL.coexpression = Daisy.Spearman(goi.SL)
 ```
 
-## SDL-parter
+### SDL-parter
 SoF
 ```{r}
-SDL.SoF = Daisy.Wilcox(goi.SDL, copynumber, inactive_overactive = 1, less_greater = 1) # SoF, one sided Wilcoxon rank test, alternative = "greater"
+SDL.SoF = Daisy.Wilcox(goi.SDL, copynumber, inactive_overactive = 1, less_greater = 1) # SoF, overactive, one sided Wilcoxon rank test, alternative = "greater"
 ```
 Functional examination
 ```{r}
-SDL.functional.examination = Daisy.Wilcox(goi.SDL, kd.ceres, inactive_overactive = 1, less_greater = 0) # Functional examination, one sided Wilcoxon rank test, alternative = "less"
+SDL.functional.examination = Daisy.Wilcox(goi.SDL, kd.ceres, inactive_overactive = 1, less_greater = 0) # Functional examination, overactive, one sided Wilcoxon rank test, alternative = "less"
 ```
 Gene coexpression
-```{r warning=FALSE}
+```{r}
 SDL.coexpression = Daisy.Spearman(goi.SDL)
 ```
+
 ## Converging the different SL and SDL sets
 
 Define function to converge SL/SDL sets.
 ```{r}
-'partner' <- function(input_genes, SoF, functional.examination, coexpression){
+'partner' = function(input_genes, SoF, functional.examination, coexpression){
   partner = lapply(1:length(input_genes), function(a) {
     dat_picker.SoF = SoF[[a]]
     dat_picker.functional_examination = functional.examination[[a]]
     dat_picker.coexpression = coexpression[[a]]
-    partnergenes = Reduce(intersect, list(dat_picker.SoF$genes, dat_picker.functional_examination$genes, dat_picker.coexpression$genes))
-    out = data.frame(genes = partnergenes,
-                     SoF = dat_picker.SoF[which(dat_picker.SoF$genes %in% partnergenes),"p_value"],
-                     functional_examination = dat_picker.functional_examination[which(dat_picker.functional_examination$genes %in% partnergenes),"p_value"],
-                     coexpression = dat_picker.coexpression[which(dat_picker.coexpression$genes %in% partnergenes),"p_value"])
+    partnergenes = Reduce(intersect, list(dat_picker.SoF$genes, dat_picker.functional_examination$genes, dat_picker.coexpression$genes)) # Intersect of genes from all three tests
+    out = data.frame(genes = partnergenes, # column with reduced genes
+                     SoF = dat_picker.SoF[which(dat_picker.SoF$genes %in% partnergenes),"p_value"], # column with p value from SoF
+                     functional_examination = dat_picker.functional_examination[which(dat_picker.functional_examination$genes %in% partnergenes),"p_value"], # column with p value from functional examination
+                     coexpression = dat_picker.coexpression[which(dat_picker.coexpression$genes %in% partnergenes),"p_value"]) # column with p value from coexpression
     return(out)
   })
   names(partner) = input_genes
   return(partner)
 }
 ```
-
+Converge different sets.
 ```{r}
 SL.partner = partner(goi.SL, SL.SoF, SL.functional.examination, SL.coexpression)
 SDL.partner = partner(goi.SDL, SDL.SoF, SDL.functional.examination, SDL.coexpression)
-data.frame("SL genes" = names(SL.partner),
-           SL_partner = sapply(1:length(SL.partner), function(a){nrow(SL.partner[[a]])}),
+kable(data.frame("SL genes" = names(SL.partner),
+           "SL partner" = sapply(1:length(SL.partner), function(a){nrow(SL.partner[[a]])}),
            "SDL genes" = names(SDL.partner),
-           SDL_partner = sapply(1:length(SDL.partner), function(a){nrow(SDL.partner[[a]])})
-           )
+           "SDL partner" = sapply(1:length(SDL.partner), function(a){nrow(SDL.partner[[a]])})
+           ))
 ```
 
 ## Plotting networks of the Interactions 
@@ -597,6 +671,7 @@ Creation of a function for transforming given data into a format iGraph can work
     edge.list = data.frame(Gene.A = names(X.partner)[a], Gene.B = dat_picker$genes, colours = color.vector[a]) #the 3 columns
   })
   edge.list = do.call(rbind, edgelist)#combine all goi-dataframes to one.
+
   edge.list$colours = as.character(edge.list$colours) #after the lapply, column "colours" has class 'factor'. For the plottingfunction it must be character 
   
   net = graph_from_data_frame(edge.list, directed = T) # tranform the dataframe into an iGraph object
@@ -612,22 +687,21 @@ Creation of a function for transforming given data into a format iGraph can work
 ```
 
 
-Creating a networkplot for the SL-partners
+Creating a networkplot for the SL-partner
 ```{r}
 network(SL.partner,2,"grey","black",8.1,"Network of SL interaction", NA, goi.SL )
 ```
 
 Creating a network for the SDL-partner 
-
 ```{r}
 network(SDL.partner,2,"grey","black",8.1,"Network of SDL interaction", NA, goi.SDL )
          
 ```
 
-Define function to reduce SL/SDL partner to the most significants
-We want to reduce the number of partner genes for better plotting without removing genes which are connected to more than one GOI.
+Because there are to many SL/SDL partner to plot a network we reduce SL/SDL partner to the most significants.
+To do so, we reduce the number of partner genes for better plotting without removing genes which are connected to more than one GOI.
 ```{r}
-'reduce.partner' <- function(list){ 
+'reduce.partner' = function(list){ 
   reduced_partner = lapply(1:length(list), function(a){ # go through every element of SL/SDL partner
     dat_picker = list[[a]]
     
@@ -664,12 +738,15 @@ SL.partner.reduced = reduce.partner(SL.partner)
 SDL.partner.reduced = reduce.partner(SDL.partner)
 SDL.partner.reduced[[3]][24,] = SDL.partner[[3]][which(SDL.partner[[3]]$genes == "FOSL1"),]
 
-data.frame("SL genes" = names(SL.partner),
-           SL_partner = sapply(1:length(SL.partner.reduced), function(a){nrow(SL.partner.reduced[[a]])}),
+kable(data.frame("SL genes" = names(SL.partner),
+           "SL partner" = sapply(1:length(SL.partner.reduced), function(a){nrow(SL.partner.reduced[[a]])}),
            "SDL genes" = names(SDL.partner),
-           SDL_partner = sapply(1:length(SDL.partner.reduced), function(a){nrow(SDL.partner.reduced[[a]])})
-           )
+           "SDL partner" = sapply(1:length(SDL.partner.reduced), function(a){nrow(SDL.partner.reduced[[a]])})
+           ))
 ```
+
+Now the number of SL/SDL partner is much better to plot.
+
 
 Plotting SL/SDL partner network with reduced number of partner
 
@@ -684,25 +761,25 @@ network(SDL.partner.reduced,4,"grey","grey",12,"Network of SDL interaction (redu
 ```
 
 # 4. Mutation prediction via logistical regression
+
 ## Prepare data for regression model
+
 Reduce all genes to them of which we have expression, copynumber and knockdown data.
 ```{r}
 regression.genes = Reduce(intersect, list(rownames(expression), rownames(copynumber), rownames(kd.ceres)))
 
-regression.expression = expression[regression.genes,]
-regression.copynumber = copynumber[regression.genes,]
-regression.kd.ceres = kd.ceres[regression.genes,]
+regression.expression = expression.HNC[regression.genes,]
+regression.copynumber = copynumber.HNC[regression.genes,]
+regression.kd.ceres = kd.ceres.HNC[regression.genes,]
 ```
-Create a dataframe with expression, copynumber, knockdown and mutation data from all samples one after another.
+Create a dataframe with expression, copynumber, knockdown and mutation data from a HNC sample.
 ```{r}
 regression.data = lapply(1:length(regression.genes), function(a) {
-  rg.expr = t(regression.expression[a,])
-  rg.cna = t(regression.copynumber[a,])
-  rg.kd = t(regression.kd.ceres[a,])
-  rg.mut = sapply(1:length(mutation), function(m) {
-    out = ifelse(regression.genes[a] %in% mutation[[m]]$Hugo_Symbol, TRUE, FALSE)
-    return(out)
-  })
+  rg.expr = t(regression.expression[a, ID[1]])
+  rg.cna = t(regression.copynumber[a, ID[1]])
+  rg.kd = t(regression.kd.ceres[a, ID[1]])
+  rg.mut = ifelse(regression.genes[a] %in% mutation[[ID[1]]]$Hugo_Symbol, TRUE, FALSE)
+
   out = data.frame("genes" = regression.genes[a], "expression" = rg.expr, "copynumber" = rg.cna, "kockdown" = rg.kd, "mutation" = rg.mut)
   colnames(out) = c("genes", "expression", "copynumber", "kockdown", "mutation")
   return(out)
@@ -710,5 +787,27 @@ regression.data = lapply(1:length(regression.genes), function(a) {
 regression.data = do.call(rbind, regression.data)
 rm(regression.genes, regression.expression, regression.copynumber, regression.kd.ceres)
 ```
-## train regression model
-## test regression model and compare different variable input
+
+## Train and test regression model
+```{r}
+set.seed(123)
+split = sample.split(regression.data$mutation, SplitRatio = 0.8)
+training.set.rg = subset(regression.data, split == TRUE)
+testing.set.rg = subset(regression.data, split == FALSE)
+
+train.model = glm(mutation~., family = binomial(link="logit"), data=training.set.rg)
+summary(train.model)
+
+anova(train.model, test="Chisq")
+
+pR2(train.model)
+
+model.results = predict(train.model, newdata = subset(testing.set.rg, select=c("expression","copynumber","kockdown")), type = "response") 
+model.results = ifelse(model.results > 0.5,1,0)
+```
+
+## Compare different variable input
+```{r}
+model.results.knockdown = predict(train.model, newdata = subset(testing.set.rg, select="kockdown"), type = "response") # Hier wollte ich noch fragen welche Kombo ausprobiert werden soll
+model.results.knockdown = ifelse(model.results.knockdown > 0.5,1,0)
+```
