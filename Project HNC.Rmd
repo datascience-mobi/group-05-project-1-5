@@ -34,7 +34,7 @@ root.dir = dirname(rstudioapi::getSourceEditorContext()$path)
 ```
 
 # General Introduction
-Head and neck cancer is defined as a group of cancers, concerning the mouth, nose and throat. With over 90%, Squamous cell carcinoma is the most common type in HNC patients. With 5.5 million affected people in 2015 it is the seventh most frequent cancer and the ninth most frequent cause of death. (Information required)
+Head and neck cancer is defined as a group of cancers, concerning the mouth, nose and throat. With over 90%, Squamous cell carcinoma is the most common type in HNC patients. With 5.5 million affected people in 2015 it is the seventh most frequent cancer and the ninth most frequent cause of death. 75% of all HNC cancer types were caused by tobacco or alcohol. Although the cure rate for HNC is really high, around 50 % of concerned patients remain suffering from an advanced disease .
 
 ![](images/HNC_Kopf.png)
 
@@ -46,7 +46,7 @@ In the century of next generation sequencing, the genome became an interesting t
 
 
 
--- > Text zu Daisy
+Daisy consists of three statistical approaches, each processing different sub data from a cancer Dataset. The first strategy is “Survival of the fittest”, where just deleted SL-paired genes were selected, that are not in a surviving cancer culture. The second strategy is “functional examination” where SL genes were identified, by knocking out genes, with the additive, that the SL partners are inactive. If the tumor shows decreased proliferation, it accounts for the SL pair group. The third strategy is “pairwise gene co- expression” that is based on the fact that SL pairs are often closely related in biological pathways and therefore exhibit similar occurrence. If a gene pair fulfills every of the three criteria, it might be a potential SL pair according to DAISY. To check for SDL partners the criteria of inactive or active is replaced by under- or overactive, measured through expression numbers and copy number alterations. 
 
 ## Milestones
 ![](images/milestones.png)
@@ -362,14 +362,7 @@ range(kd.ceres.HNC)# Range of data
 ```
 
 ### Examine knockdown values
-```{r 1_knockdown_values1}
-# Definition of a compare group
-kd.ceres.reference = kd.ceres[ , which(colnames(kd.ceres) %!in% ID)]
-
-# Comparing mean knockdown data of all samples with just HNC samples
-mean.kd.ceres.reference = apply(kd.ceres.reference, 1, mean)
-mean.kd.ceres.HNC = apply(kd.ceres.HNC, 1, mean)
-
+```{r 1_knockdown_values_dist}
 # Checking if knockdown values are normally distributed
 kd.ceres.HNC.dist = data.frame(kd_values = mean.kd.ceres.HNC, sample = "Knockdown HNC")
 kd.ceres.reference.dist = data.frame(kd_values = mean.kd.ceres.reference, sample = "reference HNC")
@@ -380,10 +373,7 @@ ggqqplot(mean.kd.ceres.dist, x = "kd_values",
    palette = c("#FC4E07", "#0073C2FF"),
    ggtheme = theme_grey())
 
-# Are there genes that tend to be more essential in HNC?
-esgene1 = kd.ceres.HNC[which(rowMeans(kd.ceres.HNC)< rowMeans(kd.ceres.reference)),]
-#Sort essential genes 
-esgene1= esgene1[order(rowMeans(esgene1)),]
+
 
 ```
 result: kd.ceres values are not normal distributed
@@ -395,25 +385,33 @@ gghistogram(kd.ceres.HNC.dist, x = "kd_values", xlab = "knockdown values", bins 
             add = "mean", rug = TRUE)+theme_grey()
 ```
 
+To check if  there are more essential genes in HNC, the menas of HNC patients and the reference group were compared.
+```{r 1_knockdown_values1}
+# Definition of a compare group
+kd.ceres.reference = kd.ceres[ , which(colnames(kd.ceres) %!in% ID)]
 
-### Applying Wilcoxon rank sum test because knockdown values are not normally distributed
-warum?
-```{r 1_knockdown_Wilcox}
-wilcox.test(mean.kd.ceres.HNC, mean.kd.ceres.reference)
+# Defining mean of knockdown values from comparegroup and HNC patients
+mean.kd.ceres.reference = apply(kd.ceres.reference, 1, mean)
+mean.kd.ceres.HNC = apply(kd.ceres.HNC, 1, mean)
+
+# Are there genes that tend to be more essential in HNC?
+esgene1 = kd.ceres.HNC[which(rowMeans(kd.ceres.HNC)< rowMeans(kd.ceres.reference)),]
+#Sort essential genes 
+esgene1= esgene1[order(rowMeans(esgene1)),]
 ```
-Resultat Fehlt
 
 ### Example EGFR
+Checking the summary of an example gene
 ```{r 1_knockdown_EGFR}
 # Transposition of dataframe esgene1
 esgeneT = as.data.frame(t(esgene1))
 summary(esgeneT$EGFR)
 ```
 
-### Boxplot of 20 genes
+### Boxplot of 20 generandom s
 ```{r 1_knockdown_boxplot}
 #boxplot of 20 of most significiant genes according to knockdown analysis
-boxplot(esgeneT[,1:20], xlab = "gene", horizontal = F, main="Knockdown values of most significiant genes",
+boxplot(sample(esgeneT,20, replace = FALSE), xlab = "gene", horizontal =T, main="Knockdown values of 20 random genes",
         xlab="genes",
         ylab="Knockdown values",
         col="blue",
@@ -423,6 +421,18 @@ boxplot(esgeneT[,1:20], xlab = "gene", horizontal = F, main="Knockdown values of
 abline(col = c("blue", "red", "black", "orange"),
     lty = 2)
 ```
+
+
+
+
+### Applying Wilcoxon rank sum test because knockdown values are not normally distributed
+To check if the HNC knockdown values differ from the compare group, a wilcoxon test is executed.
+```{r 1_knockdown_Wilcox}
+wilcox.test(mean.kd.ceres.HNC, mean.kd.ceres.reference)
+```
+The test shows, that ther isn`t a significiant difference between HNC patients and the reference group. Due  to the fact, that knocking down of essential genes has the same effect in healthy cells, than in tumorous cells.
+
+
 
 
 ### Cleanup of the enviroment
