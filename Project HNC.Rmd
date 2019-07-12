@@ -529,7 +529,11 @@ heatmap.data$sum = apply(heatmap.data, 1, sum)
 heatmap.data = heatmap.data[order(-heatmap.data$sum), 1:27] 
 
 # heatmap of the most frequently deleterious mutated genes in HNC samples
-heatmap(data.matrix(heatmap.data)[1:40,], Rowv=NA, Colv=NA, col = c("lightgrey", "tomato2"), scale="column", cexRow = 0.5, cexCol = 0.8, main = "Most frequently deleterious mutated genes in HNC samples")
+heatmap(data.matrix(heatmap.data)[1:40,],
+        Rowv=NA, Colv=NA, col = c("lightgrey", "tomato2"),
+        scale="column", cexRow = 0.5,
+        cexCol = 0.8,
+        main = "Most frequently deleterious mutated genes in HNC samples")
 ```
 
 Result: TP53, FAT1, CDKN2A, KRT3 and CASP8 are the 5 most frequently deleterious mutated genes in our HNC samples
