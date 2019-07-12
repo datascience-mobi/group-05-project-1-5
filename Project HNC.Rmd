@@ -570,6 +570,7 @@ kable(goi.lit) # show a table of goi.lit
 Because our most frequent mutated genes almost aproximately match with frequent mutations from literature we choose the 5 genes with most frequent mutations in HNC samples.
 ```{r 2_SLgoi3}
 goi.SL = rownames(heatmap.data)[1:5]
+goi.SL
 ```
 
 Clean up of the enviroment
