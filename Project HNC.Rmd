@@ -25,7 +25,6 @@ library(cluster)    # clustering algorithms
 library(factoextra) # clustering algorithms & visualization
 library(igraph)     # networkplot
 library(caTools)
-#library(pscl)
 library(caret)
 library(data.table)
 ```
@@ -180,14 +179,15 @@ Then create a dataframe with needed information for the barplot
 ```{r 1_expression_plot3}
 barplot.data = data.frame(Genes=rownames(expr.HNC.norm),
                           Values=mean.expr.HNC.norm)
-names(barplot.data) = c("Genes", "Normalised expression values")
-barplot.data$Group = ifelse(barplot.data$"Normalised expression values">0,"overexpressed","underexpressed")
-barplot.data = barplot.data[order(barplot.data$"Normalised expression values"),]
+names(barplot.data) = c("Genes", "Values")
+barplot.data$Group = ifelse(barplot.data$Values>0,"overexpressed","underexpressed")
+barplot.data = barplot.data[order(barplot.data$Values),]
 barplot.data = barplot.data[c(1:19, (nrow(barplot.data)-20):nrow(barplot.data)),]
 ```
 and plot this dataframe.
 ```{r 1_expression_plot4}
 ggplot(barplot.data,aes(x=Genes,y=Values,fill=Group)) +
+  ylab("Normalised Expression Values") +
   geom_bar(stat="identity") +
   coord_flip() +
   theme(axis.text.y = element_text(size=6))
@@ -322,7 +322,8 @@ Plot mutations in HNC samples
 ggplot(data = HNC_mutated_genes_df_highest_ordered, aes(x=Gene, y=Freq)) +
   geom_bar(stat = "identity", width = 0.5, fill="steelblue") +
   geom_text(aes(label=Freq), vjust=-0.3, size=3.5) +
-  theme_grey()+ coord_flip()HNC_mut_plot
+  theme_grey() +
+  coord_flip()
 ```
 
 
@@ -889,7 +890,7 @@ head(results_df) #look at the data
 
 ## Plot the data
 ```{r 4_plot}
-pdf(paste0(root.dir, "/", "190711_LinearModel_LogRegression_PrecisionOverview.pdf"), width = 15)
+# pdf(paste0(root.dir, "/", "190711_LinearModel_LogRegression_PrecisionOverview.pdf"), width = 15)
 ggplot(results_df, aes(recall,precision)) + 
   geom_point() + 
   geom_line() + 
@@ -903,5 +904,5 @@ ggplot(results_df, aes(recall,precision)) +
         axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
         legend.title= element_blank(),
         strip.text.y = element_text(angle = 0))
-dev.off()
+# dev.off()
 ```
