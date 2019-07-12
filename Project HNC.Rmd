@@ -15,6 +15,7 @@ knitr::opts_chunk$set(echo = TRUE,
 
 # Library packages
 library(knitr)      # RMarkdown
+library(rstudioapi)
 library(ggplot2)
 library(ggpubr)     # histograms
 theme_set(theme_pubr())
@@ -23,9 +24,10 @@ library(tidyverse)  # data manipulation
 library(cluster)    # clustering algorithms
 library(factoextra) # clustering algorithms & visualization
 library(igraph)     # networkplot
-library(rstudioapi)
 library(caTools)
-library(pscl)
+#library(pscl)
+library(caret)
+library(data.table)
 ```
 ```{r wd, eval = FALSE, include = FALSE}
 # Set working directiory
@@ -178,14 +180,17 @@ Then create a dataframe with needed information for the barplot
 ```{r 1_expression_plot3}
 barplot.data = data.frame(Genes=rownames(expr.HNC.norm),
                           Values=mean.expr.HNC.norm)
-names(barplot.data) = c("Genes", "Values")
-barplot.data$Group = ifelse(barplot.data$Values>0,"overexpressed","underexpressed")
-barplot.data = barplot.data[order(barplot.data$Values),]
+names(barplot.data) = c("Genes", "Normalised expression values")
+barplot.data$Group = ifelse(barplot.data$"Normalised expression values">0,"overexpressed","underexpressed")
+barplot.data = barplot.data[order(barplot.data$"Normalised expression values"),]
 barplot.data = barplot.data[c(1:19, (nrow(barplot.data)-20):nrow(barplot.data)),]
 ```
 and plot this dataframe.
 ```{r 1_expression_plot4}
-ggplot(barplot.data,aes(x=Genes,y=Values,fill=Group))+geom_bar(stat="identity")+coord_flip()+theme(axis.text.y = element_text(size=6))
+ggplot(barplot.data,aes(x=Genes,y=Values,fill=Group)) +
+  geom_bar(stat="identity") +
+  coord_flip() +
+  theme(axis.text.y = element_text(size=6))
 ```
 
 ### Cleanup of the enviroment
@@ -261,7 +266,10 @@ copynumber.HNC.norm$Group = ifelse(copynumber.HNC.norm$values > 0,"high CN","low
 
 Plotting genes with the highest and lowest copynumbers.
 ```{r  1_copynumber_plot}
-ggplot(copynumber.HNC.norm[c(1:20,23172:23192),],aes(x=genes,y=values,fill=Group))+geom_bar(stat="identity")+coord_flip()+theme(axis.text.y = element_text(size=6))
+ggplot(copynumber.HNC.norm[c(1:20,23172:23192),],aes(x=genes,y=values,fill=Group)) +
+  geom_bar(stat="identity") +
+  coord_flip() +
+  theme(axis.text.y = element_text(size=6))
 ```
 
 
@@ -303,15 +311,18 @@ colnames(HNC_mutated_genes_df_highest_ordered) = colnames_ordered
 
 Plot mutations in all samples
 ```{r  1_muation_frequency3}
-all_mut_plot = ggplot(data = all_mutated_genes_df_highest_30_ordered, aes(x=Gene, y=Freq)) + geom_bar(stat = "identity", width = 0.5, fill="steelblue") +  geom_text(aes(label=Freq), vjust=-0.3, size=2.5) + theme_grey() + coord_flip()
-
-all_mut_plot
+ggplot(data = all_mutated_genes_df_highest_30_ordered, aes(x=Gene, y=Freq)) +
+  geom_bar(stat = "identity", width = 0.5, fill="steelblue") +
+  geom_text(aes(label=Freq), vjust=-0.3, size=2.5) +
+  theme_grey() + coord_flip()
 ```
 
 Plot mutations in HNC samples
 ```{r  1_muation_frequency4}
-HNC_mut_plot = ggplot(data = HNC_mutated_genes_df_highest_ordered, aes(x=Gene, y=Freq)) + geom_bar(stat = "identity", width = 0.5, fill="steelblue") + geom_text(aes(label=Freq), vjust=-0.3, size=3.5) + theme_grey()+ coord_flip()
-HNC_mut_plot
+ggplot(data = HNC_mutated_genes_df_highest_ordered, aes(x=Gene, y=Freq)) +
+  geom_bar(stat = "identity", width = 0.5, fill="steelblue") +
+  geom_text(aes(label=Freq), vjust=-0.3, size=3.5) +
+  theme_grey()+ coord_flip()HNC_mut_plot
 ```
 
 
@@ -321,26 +332,24 @@ HNC_mut_plot
 --> warum wir nur deleterious benutzen
 
 ```{r 1_muation_cleanmutation}
-'mutation.clean' <- function(data){
-  cleaned_data = lapply(1:length(data), function(a){
+'mutation.clean' = function(data){
+  cleaned_data = lapply(1:length(data), function(a) {
     dat_picker = data[[a]]
-    dat_picker = dat_picker[,c("Hugo_Symbol","isDeleterious")]
-    dat_picker = dat_picker[which(dat_picker$isDeleterious == TRUE),]
+    dat_picker = dat_picker[, c("Hugo_Symbol", "isDeleterious")]
+    dat_picker = dat_picker[which(dat_picker$isDeleterious == TRUE), ]
     return(dat_picker)
   })
+  names(cleaned_data) = names(data)
+  return(cleaned_data)
 }
-all.IDs = names(mutation)
 mutation = mutation.clean(mutation)
-names(mutation) = all.IDs
-rm(all.IDs)
-
 mutation.HNC = mutation.clean(mutation.HNC)
-names(mutation.HNC) = ID
+head(mutation.HNC[[1]])
 ```
 
 ### Cleanup of the enviroment
 ```{r 1_muation_cleanup}
-rm(all_mutations, all_mutated_genes, all_mutated_genes_df, ID_all_highest_30_frequencies, ID_all_highest_frequencies, all_mutated_genes_df_highest_30, all_mutated_genes_df_highest_30_ordered, colnames_ordered, HNC_mutations, HNC_mutated_genes, HNC_mutated_genes_df, ID_HNC_highest_frequencies, HNC_mutated_genes_df_highest_ordered, HNC_mut_plot, all_mut_plot)
+rm(all_mutations, all_mutated_genes, all_mutated_genes_df, ID_all_highest_30_frequencies, ID_all_highest_frequencies, all_mutated_genes_df_highest_30, all_mutated_genes_df_highest_30_ordered, colnames_ordered, HNC_mutations, HNC_mutated_genes, HNC_mutated_genes_df, ID_HNC_highest_frequencies, HNC_mutated_genes_df_highest_ordered)
 ```
 
 ## Knockdown
@@ -438,7 +447,8 @@ comb.ex.cna = do.call(rbind, km.data)
 comb.ex.cna = comb.ex.cna[which(comb.ex.cna$copynumber >= 1 & comb.ex.cna$expression >=quantile(comb.ex.cna$expression,0.95)),]
 
 #Plotting of normalized expression valuess against CNA data. 
-ggplot(comb.ex.cna[,2:3], aes(x= expression, y= copynumber , color = "smooth")) + geom_point()
+ggplot(comb.ex.cna[,2:3], aes(x= expression, y= copynumber , color = "smooth")) +
+  geom_point()
 
 #ellbow method to find optimal ammount of clusters
 emp = vector() #create an empty vector
@@ -624,14 +634,17 @@ Both functions return a list, which contains the five genes of interest, each co
 SoF
 ```{r 3_SL_SoF}
 SL.SoF = Daisy.Wilcox(goi.SL, copynumber, inactive_overactive = 0, less_greater = 1) # SoF, inactive, one sided Wilcoxon rank test, alternative = "greater"
+head(SL.SoF[[1]]) # example of SL SoF for first GOI (TP53)
 ```
 Functional examination
 ```{r 3_SL_functional_examination}
 SL.functional.examination = Daisy.Wilcox(goi.SL, kd.ceres, inactive_overactive = 0, less_greater = 0) # Functional examination, inactive, one sided Wilcoxon rank test, alternative = "less"
+head(SL.functional.examination[[1]]) # example of SL functional examination for first GOI (TP53)
 ```
 Gene coexpression
 ```{r 3_SL_coexpression}
 SL.coexpression = Daisy.Spearman(goi.SL)
+head(SL.coexpression[[1]]) # example of SL coexpression for first GOI (TP53)
 ```
 
 ### SDL-parter
@@ -673,9 +686,9 @@ Converge different sets.
 SL.partner = partner(goi.SL, SL.SoF, SL.functional.examination, SL.coexpression)
 SDL.partner = partner(goi.SDL, SDL.SoF, SDL.functional.examination, SDL.coexpression)
 kable(data.frame("SL genes" = names(SL.partner),
-           "SL partner" = sapply(1:length(SL.partner), function(a){nrow(SL.partner[[a]])}),
+           "SL number of partner" = sapply(1:length(SL.partner), function(a){nrow(SL.partner[[a]])}),
            "SDL genes" = names(SDL.partner),
-           "SDL partner" = sapply(1:length(SDL.partner), function(a){nrow(SDL.partner[[a]])})
+           "SDL number of partner" = sapply(1:length(SDL.partner), function(a){nrow(SDL.partner[[a]])})
            ))
 ```
 
@@ -699,10 +712,24 @@ Creation of a function for transforming given data into a format iGraph can work
   layout1 = layout_with_kk(net)                        # given layout
 
 #plotting parameters are defined. vertex= Genes edges = interactions 
-  plot(net, layout = layout1, rescale = T, ylim = c(-0.9,1), xlim = c(-0.02,-0.1), edge.color = edge.list$colours , edge.width = width, edge.arrow.mode = 0, vertex.color = node.color,vertex.frame.color = frame.color, vertex.size = node.size, vertex.label.font = 2, vertex.label.color = "black", main = Titel, vertex.label = label)
+  plot(net, layout = layout1, rescale = T,
+       ylim = c(-0.9,1),
+       xlim = c(-0.02,-0.1),
+       edge.color = edge.list$colours,
+       edge.width = width,
+       edge.arrow.mode = 0,
+       vertex.color = node.color,
+       vertex.frame.color = frame.color,
+       vertex.size = node.size,
+       vertex.label.font = 2,
+       vertex.label.color = "black",
+       main = Titel,
+       vertex.label = label)
 
 #adding a legend to the plot
-  legend (x = 1.2, y = 1, GOI,  fill = c("darkred", "darkgreen", "turquoise", "yellow", "orange"))
+  legend (x = 1.2,
+          y = 1, GOI,
+          fill = c("darkred", "darkgreen", "turquoise", "yellow", "orange"))
 }
 
 ```
@@ -782,52 +809,99 @@ network(SDL.partner.reduced,4,"grey","grey",12,"Network of SDL interaction (redu
 
 # 4. Mutation prediction via logistical regression
 
-## Prepare data for regression model
-
-Reduce all genes to them of which we have expression, copynumber and knockdown data.
-```{r 4_genes}
+## Prepare the data for prediction analysis
+```{r 4_df}
 regression.genes = Reduce(intersect, list(rownames(expression), rownames(copynumber), rownames(kd.ceres)))
 
-regression.expression = expression.HNC[regression.genes,]
-regression.copynumber = copynumber.HNC[regression.genes,]
-regression.kd.ceres = kd.ceres.HNC[regression.genes,]
-```
-Create a dataframe with expression, copynumber, knockdown and mutation data from a HNC sample.
-```{r 4_dataframe}
-regression.data = lapply(1:length(regression.genes), function(a) {
-  rg.expr = t(regression.expression[a, ID[1]])
-  rg.cna = t(regression.copynumber[a, ID[1]])
-  rg.kd = t(regression.kd.ceres[a, ID[1]])
-  rg.mut = ifelse(regression.genes[a] %in% mutation[[ID[1]]]$Hugo_Symbol, TRUE, FALSE)
-
-  out = data.frame("genes" = regression.genes[a], "expression" = rg.expr, "copynumber" = rg.cna, "kockdown" = rg.kd, "mutation" = rg.mut)
-  colnames(out) = c("genes", "expression", "copynumber", "kockdown", "mutation")
-  return(out)
+regression.mutation = sapply(1:length(regression.genes), function(a){
+  ifelse(regression.genes[a] %in% mutation.HNC[[1]]$Hugo_Symbol, TRUE, FALSE)
 })
-regression.data = do.call(rbind, regression.data)
-rm(regression.genes, regression.expression, regression.copynumber, regression.kd.ceres)
+
+regression.data = data.frame("genes" = regression.genes,
+                             "expression" = expression.HNC[regression.genes, 1],
+                             "copynumber" = copynumber.HNC[regression.genes, 1],
+                             "kockdown" = kd.ceres.HNC[regression.genes, 1],
+                             "mutation" = regression.mutation)
+
+rm(regression.genes, regression.mutation)
+dim(regression.data)
+head(regression.data)
 ```
 
-## Train and test regression model
-```{r 4_model, eval = FALSE, include = FALSE}
-set.seed(123)
-split = sample.split(regression.data$mutation, SplitRatio = 0.8)
-training.set.rg = subset(regression.data, split == TRUE)
-testing.set.rg = subset(regression.data, split == FALSE)
-
-train.model = glm(mutation~., family = binomial(link="logit"), data=training.set.rg)
-summary(train.model)
-
-anova(train.model, test="Chisq")
-
-pR2(train.model)
-
-model.results = predict(train.model, newdata = subset(testing.set.rg, select=c("expression","copynumber","kockdown")), type = "response") 
-model.results = ifelse(model.results > 0.5,1,0)
+## Making a linear based logistic regression
+```{r 4_factor_mutation}
+regression.data$mutation = factor(regression.data$mutation, levels = c("FALSE", "TRUE")) #reformat the data because strings can not be an input for a machine learning model
+head(regression.data)
 ```
 
-## Compare different variable input
-```{r 4_compare, eval = FALSE, include = FALSE}
-model.results.knockdown = predict(train.model, newdata = subset(testing.set.rg, select="kockdown"), type = "response") # Hier wollte ich noch fragen welche Kombo ausprobiert werden soll
-model.results.knockdown = ifelse(model.results.knockdown > 0.5,1,0)
+## Split the data into train and test-data
+```{r 4_split_data}
+inTrain = createDataPartition(y = regression.data$mutation, p = .75, list = FALSE)
+train.set = regression.data[inTrain,] #only get training data
+rownames(train.set) = train.set$genes #reformat the rownames
+train.set = train.set[,2:ncol(train.set)] #get rid of the gennames becaue they are now the rownames
+head(train.set) #check the data
+
+test.set = regression.data[-inTrain,]
+rownames(test.set) = test.set$genes
+test.set = test.set[,2:ncol(test.set)]
+head(test.set)
+```
+
+## Training the model
+```{r 4_train}
+lrfit = glm(mutation ~ ., data=train.set,family="binomial") 
+lrfit
+summary(lrfit)
+```
+
+## Evaluate the model for the performance
+```{r 4_test}
+pred = predict(lrfit,newdata=test.set,type="response")
+hist(pred) #look at the predictions
+```
+
+## Make a nice plot to evaluate the precision and the recall
+```{r 4_treshhold}
+threshhold_ls = seq(min(pred), max(pred), by=0.001) #make a thresshold list
+threshold_list = lapply(seq_along(threshhold_ls), function(a) table(pred>threshhold_ls[a], test.set$mutation))
+```
+
+## Calculate the precision values
+```{r 4_precision}
+results_df = lapply(1:length(threshold_list), function(a) { #make a df out of the list of lists
+  threshold = threshold_list[[a]]
+  threshold_value = threshhold_ls[[a]]
+  
+  df_prec_recall = as.data.frame(list(threshold["FALSE", "FALSE"], threshold["FALSE", "TRUE"], threshold["TRUE", "FALSE"], threshold["TRUE", "TRUE"]))
+  df_prec_recall$threshold = threshold_value
+  colnames(df_prec_recall) = c("TN", "FN", "FP", "TP", "Thresh")
+  return(df_prec_recall)
+})
+
+results_df = rbindlist(results_df) #bind all the lists together
+recall = apply(results_df, 1, function(x){ x[["TP"]]/(x[["TP"]]+x[["FN"]])}) #calculate the recall
+precision = apply(results_df, 1, function(x){ x[["TP"]]/(x[["TP"]]+x[["FP"]])}) #calculate the precision
+results_df$recall = recall #bind recall to the data
+results_df$precision = precision #bind precision to the data
+head(results_df) #look at the data
+```
+
+## Plot the data
+```{r 4_plot}
+pdf(paste0(root.dir, "/", "190711_LinearModel_LogRegression_PrecisionOverview.pdf"), width = 15)
+ggplot(results_df, aes(recall,precision)) + 
+  geom_point() + 
+  geom_line() + 
+  ggtitle("Precision/Recall plotting (Log.Reg.)") +
+  ylab("Precision") +
+  xlab("Recall") +
+  theme_bw(base_size = 7) +
+  theme(legend.position="bottom",
+        legend.direction="horizontal",
+        plot.title = element_text(hjust = 0.5),
+        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
+        legend.title= element_blank(),
+        strip.text.y = element_text(angle = 0))
+dev.off()
 ```
