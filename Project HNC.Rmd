@@ -23,9 +23,7 @@ library(tidyverse)  # data manipulation
 library(cluster)    # clustering algorithms
 library(factoextra) # clustering algorithms & visualization
 library(igraph)     # networkplot
-library(rstudioapi)
 library(caTools)
-library(pscl)
 ```
 ```{r wd, eval = FALSE, include = FALSE}
 # Set working directiory
