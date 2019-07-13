@@ -724,23 +724,26 @@ Creation of a function for transforming given data into a format iGraph can work
   layout1 = layout_with_kk(net)                        # given layout
 
 #plotting parameters are defined. vertex= Genes edges = interactions
-  plot(net, layout = layout1, rescale = T, ylim = c(-0.9,1), xlim = c(-0.02,-0.1), edge.color = edge.list$colours , edge.width = width, edge.arrow.mode = 0, vertex.color = node.color,vertex.frame.color = frame.color, vertex.size = node.size, vertex.label.font = 2, vertex.label.color = "black", main = Titel, vertex.label = label)
+  plot(net, layout = layout1, rescale = T, ylim = c(-0.9,1), xlim = c(-0.1,-0.1), edge.color = edge.list$colours , edge.width = width, edge.arrow.mode = 0, vertex.color = node.color,vertex.frame.color = frame.color, vertex.size = node.size, vertex.label.font = 2, vertex.label.color = "black", vertex.label = label, margin = 0.1)
 
 #adding a legend to the plot
   legend (x = 1.2, y = 1, GOI,  fill = c("darkred", "darkgreen", "turquoise", "yellow", "orange"))
+  
+# add titel to the graph
+  title(Titel,cex.main=3,col.main="black ")
 }
 
 ```
 
 
 Creating a networkplot for the SL-partner
-```{r 3_SL_network, fig.height = 7, fig.width = 14}
-network(SL.partner,2,"grey","black",8.1,"Network of SL interaction", NA, goi.SL )
+```{r 3_SL_network, fig.height = 7, fig.width = 10}
+network(SL.partner,2,"grey","black",3,"Network of SL interaction", NA, goi.SL )
 ```
 
 Creating a network for the SDL-partner
-```{r 3_SDL_network, fig.height = 7, fig.width = 14}
-network(SDL.partner,2,"grey","black",8.1,"Network of SDL interaction", NA, goi.SDL )
+```{r 3_SDL_network, fig.height = 7, fig.width = 10}
+network(SDL.partner,2,"grey","black",3,"Network of SDL interaction", NA, goi.SDL )
 ```
 
 Because there are to many SL/SDL partner to plot a network we reduce SL/SDL partner to the most significants.
