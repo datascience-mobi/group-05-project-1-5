@@ -38,20 +38,20 @@ root.dir = dirname(rstudioapi::getSourceEditorContext()$path)
 # General Introduction
 Head and neck cancer is defined as a group of cancers, concerning the mouth, nose and throat (Figure 1). With over 90%, Squamous cell carcinoma is the most common type in HNC patients. With 5.5 million affected people in 2015 it is the seventh most frequent cancer and the ninth most frequent cause of death. 75% of all HNC cancer types were caused by tobacco or alcohol. Although the cure rate for HNC is really high, around 50 % of concerned patients remain suffering from an advanced disease .
 
-![Figure 1 | Most affected tissues and organs by head and neck cancer](images/HNC_Kopf.png)
+![Most affected tissues and organs by head and neck cancer](images/HNC_Kopf.png)
 
 
 In the century of next generation sequencing, the genome became an interesting target for scientists. Approaches that directly affect important oncogenes often fail due to the fact that these genes play an important role in healthy cells. The researchers in our paper (Jerby-Arnon, L., et al. (2014). "Predicting Cancer-Specific Vulnerability via Data-Driven Detection of Synthetic Lethality." Cell 158(5): 1199-1209.) investigated synthetic lethality and synthetic dosage lethality that uses gene interactions to affect tumorous proliferation. Synthetic letahlity describes a gene interaction in which single-gene defects are compatible with cell viability, but the combination of gene effects results in cell death. Synthetic dosage lethality occurs, when the overexpression of one gene is combined with the knockout of another gene.
 
 
-![Figure 2 | Daisy-System](images/Daisy.png)
+![Daisy-System](images/Daisy.png)
 
 
 
 Daisy consists of three statistical approaches (Figure 2), each processing different sub data from a cancer Dataset. The first strategy is “Survival of the fittest”, where just deleted SL-paired genes were selected, that are not in a surviving cancer culture. The second strategy is “functional examination” where SL genes were identified, by knocking out genes, with the additive, that the SL partners are inactive. If the tumor shows decreased proliferation, it accounts for the SL pair group. The third strategy is “pairwise gene co- expression” that is based on the fact that SL pairs are often closely related in biological pathways and therefore exhibit similar occurrence. If a gene pair fulfills every of the three criteria, it might be a potential SL pair according to DAISY. To check for SDL partners the criteria of inactive or active is replaced by under- or overactive, measured through expression numbers and copy number alterations.
 
 ## Milestones
-![Figure 3 | Milestones of our project](images/milestones.png)
+![Milestones of our project](images/milestones.png)
 
 
 The strategy of our project consisted of 4 main milestones (Figure 3). At first we familiarized with the data and did the first descriptive statistics in milestone 1. Secondly, we identified potential genes “of interest” (SL and SDL candidates), according to DAISY-System. In our third milestone, the core task of our project was implemented. The identification of SL and SDL pairs was executed using functional examination, survival of the fittest and pairwise co-expression. Lastly, in our fourth milestone we tested logistic regression to predict mutations.
@@ -466,7 +466,7 @@ rm(kd.ceres.HNC.dist, kd.ceres.reference, kd.ceres.reference.dist, mean.kd.ceres
 
 ## k-means clustering of CNA and expression data with normalized values(-reference) for SDL GOI
 To find potential genes for SDL pair detection, clustering through k-means was executed. 
-```{r 1_kmeans1}
+```{r 2_kmeans}
 km.genes = Reduce(intersect, list(rownames(expression.HNC), rownames(copynumber.HNC))) # Intersect set of expression and CNA
 
 # Create data rame with expression and CNA values
@@ -487,7 +487,7 @@ ggplot(comb.ex.cna[, 2:3],
 ```
 
 To check the perfect ammount of clusters in k-means, an ellbow test was implemented.
-```{r 1_ellbow method}
+```{r 2_ellbow method}
 # Ellbow method to find optimal ammount of clusters
 emp = vector() # Create an empty vector
 for (i in 1:10) emp[i] = sum(kmeans(comb.ex.cna[2:3], i)$withinss) # Calculate the sum within squared values for 10 clusters
@@ -506,7 +506,7 @@ plot(1:10,
 Result: The ellbow test shows that 3 clusters are sufficient.
 
 K-means were executed and plotted. Afterwards the potential SDL candidates were identified through higher expression values.
-```{r 1_kmeansclustering}
+```{r 2_kmeansclustering}
 # Fitting K-Means to the dataset
 kmeans = kmeans(x = comb.ex.cna[,2:3], centers = 3,iter.max = 1000, nstart = 1) # See elbow method (k = 3) 
 y_kmeans = kmeans$cluster 
@@ -530,7 +530,7 @@ clusplot(comb.ex.cna,
 The Plot "Cluster of genes" features the 3 clusters of values from expression and CNA data. Due to little variance between the data pairs, the intersection set is comparatively big. 
 
 In order to define SDL candidates, the cluster with highest expression values was chosen and filtered again according to expression numbers. 
-```{r 1_goiSDL}
+```{r 2_goiSDL}
 comb.ex.cna = cbind(comb.ex.cna, y_kmeans)# Combine kmeans with genes
 # Sort comb.ex.cna data decresing for selecting adequate number of cluster
 comb.ex.cna = comb.ex.cna[order(comb.ex.cna$expression,decreasing =TRUE),]
