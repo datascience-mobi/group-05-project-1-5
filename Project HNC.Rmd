@@ -261,7 +261,7 @@ cna.HNC.norm = as.data.frame(apply(copynumber.HNC, 2, function(x) {
 Creating a dataframe of HNC copynumber values. The values are normalized to the mean copynumbers of the reference data. For further analysing the dataframe is ordered in a decreasing manner.
 ```{r  1_copynumber_normalisation3}
 Values = copynumber.HNC.mean - copynumber.ref.mean
-copynumber.HNC.norm = data.frame(values = sort(Values, decreasing = TRUE), Genes = row.names(copynumber.HNC))
+copynumber.HNC.norm = data.frame(values = sort(Values, decreasing = TRUE), genes = row.names(copynumber.HNC))
 copynumber.HNC.norm$Group = ifelse(copynumber.HNC.norm$values > 0,"high CN","low CN")
 ```
 
