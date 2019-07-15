@@ -268,6 +268,7 @@ copynumber.HNC.norm$Group = ifelse(copynumber.HNC.norm$values > 0,"high CN","low
 Plotting genes with the highest and lowest copynumbers.
 ```{r  1_copynumber_plot}
 ggplot(copynumber.HNC.norm[c(1:20,23172:23192),],aes(x=genes,y=values,fill=Group)) +
+  ylab("Normalised CNA Values") +
   geom_bar(stat="identity") +
   coord_flip() +
   theme(axis.text.y = element_text(size=6))
@@ -311,7 +312,7 @@ colnames(HNC_mutated_genes_df_highest_ordered) = colnames_ordered
 ### Plotting mutation frequencies of all samples and of HNC samples
 
 Plot mutations in all samples
-```{r  1_muation_frequency3}
+```{r  1_muation_frequency3, fig.height = 7}
 ggplot(data = all_mutated_genes_df_highest_30_ordered, aes(x=Gene, y=Freq)) +
   geom_bar(stat = "identity", width = 0.5, fill="steelblue") +
   geom_text(aes(label=Freq), vjust=-0.3, size=2.5) +
@@ -319,7 +320,7 @@ ggplot(data = all_mutated_genes_df_highest_30_ordered, aes(x=Gene, y=Freq)) +
 ```
 
 Plot mutations in HNC samples
-```{r  1_muation_frequency4}
+```{r  1_muation_frequency4, fig.height = 7}
 ggplot(data = HNC_mutated_genes_df_highest_ordered, aes(x=Gene, y=Freq)) +
   geom_bar(stat = "identity", width = 0.5, fill="steelblue") +
   geom_text(aes(label=Freq), vjust=-0.3, size=3.5) +
@@ -384,7 +385,8 @@ ggqqplot(mean.kd.ceres.dist, x = "kd_values",
 
 
 ```
-result: kd.ceres values are not normal distributed
+
+Result: kd.ceres values are not normal distributed
 
 Checking the distribution for knockdown values
 ```{r 1_knockdown_values2}
@@ -392,6 +394,7 @@ gghistogram(kd.ceres.HNC.dist, x = "kd_values", xlab = "knockdown values", bins 
             fill = "#0073C2FF", color = "#0073C2FF",
             add = "mean", rug = TRUE)+theme_grey()
 ```
+
 
 To check if  there are more essential genes in HNC, the means of HNC patients and the reference group were compared.
 ```{r 1_knockdown_values1}
@@ -420,7 +423,7 @@ boxplot(sample(esgeneT,20, replace = FALSE), xlab = "gene", horizontal =T, main=
         outline = TRUE,
         notch = TRUE)
 abline(col = c("blue", "red", "black", "orange"),
-    lty = 2)
+        lty = 2)
 ```
 
 
@@ -461,9 +464,11 @@ comb.ex.cna = do.call(rbind, km.data)
 comb.ex.cna = comb.ex.cna[which(comb.ex.cna$copynumber >= 1 & comb.ex.cna$expression >=quantile(comb.ex.cna$expression,0.95)),]
 
 # Plotting of normalized expression valuess against CNA data for a short overview. 
-ggplot(comb.ex.cna[,2:3], aes(x= expression, y= copynumber , color = "smooth")) +
+ggplot(comb.ex.cna[, 2:3],
+       aes(x = expression, y = copynumber, color = "smooth")) +
   geom_point()
 ```
+
 To check the perfect ammount of clusters in k-means, an ellbow test was implemented
 ```{r 1_ellbow method}
 # Ellbow method to find optimal ammount of clusters
@@ -481,9 +486,10 @@ plot(1:10,
 ```
 
 
-The ellbow test shows that 3 clusters are sufficient
+Result: The ellbow test shows that 3 clusters are sufficient.
 
-K-means were executed and plotted. Afterwards the potential SDL candidates were identified through higher expression values.  
+
+K-means were executed and plotted. Afterwards the potential SDL candidates were identified through higher expression values.
 ```{r 1_kmeansclustering}
 # Fitting K-Means to the dataset
 kmeans = kmeans(x = comb.ex.cna[,2:3], centers = 3,iter.max = 1000, nstart = 1) # See elbow method (k = 3) 
@@ -820,7 +826,6 @@ Reduce SL.parter/SDL.partner to the most significant
 ```{r  3_reduction}
 SL.partner.reduced = reduce.partner(SL.partner)
 SDL.partner.reduced = reduce.partner(SDL.partner)
-SDL.partner.reduced[[3]][24,] = SDL.partner[[3]][which(SDL.partner[[3]]$genes == "FOSL1"),]
 
 kable(data.frame("SL genes" = names(SL.partner),
            "SL partner" = sapply(1:length(SL.partner.reduced), function(a){nrow(SL.partner.reduced[[a]])}),
@@ -846,37 +851,45 @@ network(SDL.partner.reduced,4,"grey","grey",12,"Network of SDL interaction (redu
 
 # 4. Mutation prediction via logistical regression
 
-## Prepare the data for prediction analysis
+## Prepare data for regression model
 ```{r 4_df}
+# Reduce all genes to them of which we have expression, copynumber and knockdown data.
 regression.genes = Reduce(intersect, list(rownames(expression), rownames(copynumber), rownames(kd.ceres)))
 
-regression.mutation = sapply(1:length(regression.genes), function(a){
-  ifelse(regression.genes[a] %in% mutation.HNC[[1]]$Hugo_Symbol, TRUE, FALSE)
+# Create a dataframe with expression, copynumber, knockdown and mutation data from a HNC sample.
+regression.data = lapply(1:length(ID), function(a){
+  
+  regression.mutation = sapply(1:length(regression.genes), function(b){
+    ifelse(regression.genes[b] %in% mutation.HNC[[a]]$Hugo_Symbol, TRUE, FALSE)
+  })
+
+  regression.data = data.frame("genes" = paste(regression.genes, ID[a], sep = "_"),
+                               "expression" = expression.HNC[regression.genes, a],
+                               "copynumber" = copynumber.HNC[regression.genes, a],
+                               "kockdown" = kd.ceres.HNC[regression.genes, a],
+                               "mutation" = regression.mutation)
 })
 
-regression.data = data.frame("genes" = regression.genes,
-                             "expression" = expression.HNC[regression.genes, 1],
-                             "copynumber" = copynumber.HNC[regression.genes, 1],
-                             "kockdown" = kd.ceres.HNC[regression.genes, 1],
-                             "mutation" = regression.mutation)
+# Bind these 27 dataframes to one dataframe
+regression.data = do.call(rbind, regression.data)
 
-rm(regression.genes, regression.mutation)
+rm(regression.genes)
 dim(regression.data)
 head(regression.data)
 ```
 
-## Making a linear based logistic regression
+Reformat the data because strings can not be an input for a machine learning model
 ```{r 4_factor_mutation}
-regression.data$mutation = factor(regression.data$mutation, levels = c("FALSE", "TRUE")) # Reformat the data because strings can not be an input for a machine learning model
+regression.data$mutation = factor(regression.data$mutation, levels = c("FALSE", "TRUE"))
 head(regression.data)
 ```
 
-## Split the data into train and test-data
+Split the data into train and test-data
 ```{r 4_split_data}
 inTrain = createDataPartition(y = regression.data$mutation, p = .75, list = FALSE)
 train.set = regression.data[inTrain,] # Only get training data
 rownames(train.set) = train.set$genes # Reformat the rownames
-train.set = train.set[,2:ncol(train.set)] # Get rid of the gennames becaue they are now the rownames
+train.set = train.set[,2:ncol(train.set)] # Get rid of the gene names becaue they are now the rownames
 head(train.set) # Check the data
 
 test.set = regression.data[-inTrain,]
@@ -885,26 +898,28 @@ test.set = test.set[,2:ncol(test.set)]
 head(test.set)
 ```
 
-## Training the model
+## Train the model
 ```{r 4_train}
 lrfit = glm(mutation ~ ., data=train.set,family="binomial") 
 lrfit
 summary(lrfit)
 ```
 
-## Evaluate the model for the performance
+## Evaluate the precision and the recall of the model
 ```{r 4_test}
 pred = predict(lrfit,newdata=test.set,type="response")
 hist(pred) # Look at the predictions
 ```
 
-## Make a nice plot to evaluate the precision and the recall
+
+
+Devide prediction in tressholds
 ```{r 4_treshhold}
 threshhold_ls = seq(min(pred), max(pred), by=0.001) # Make a thresshold list
 threshold_list = lapply(seq_along(threshhold_ls), function(a) table(pred>threshhold_ls[a], test.set$mutation))
 ```
 
-## Calculate the precision values
+Calculate the precision values
 ```{r 4_precision}
 results_df = lapply(1:length(threshold_list), function(a) { # Make a df out of the list of lists
   threshold = threshold_list[[a]]
@@ -924,7 +939,7 @@ results_df$precision = precision # Bind precision to the data
 head(results_df) # Look at the data
 ```
 
-## Plot the data
+Plot the data
 ```{r 4_plot}
 ggplot(results_df, aes(recall,precision)) + 
   geom_point() + 
@@ -940,3 +955,10 @@ ggplot(results_df, aes(recall,precision)) +
         legend.title= element_blank(),
         strip.text.y = element_text(angle = 0))
 ```
+
+
+Clean the enviroment
+```{r 4_cleanup}
+rm(precision, pred, recall, regression.genes, threshhold_ls, inTrain, lrfit, results_df, test.set, threshold_list, train.set)
+```
+
