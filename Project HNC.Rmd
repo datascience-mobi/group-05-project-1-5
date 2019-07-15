@@ -3,6 +3,7 @@ title: "Project Head and Neck Cancer"
 author: "Nils Mechtel, Tobias Hub, Niklas Urbanek, Pascal Poc"
 date: "21 July 2019"
 output: pdf_document
+fig_caption: yes
 ---
 
 ```{r setup, include = FALSE}
@@ -35,23 +36,25 @@ root.dir = dirname(rstudioapi::getSourceEditorContext()$path)
 ```
 
 # General Introduction
-Head and neck cancer is defined as a group of cancers, concerning the mouth, nose and throat. With over 90%, Squamous cell carcinoma is the most common type in HNC patients. With 5.5 million affected people in 2015 it is the seventh most frequent cancer and the ninth most frequent cause of death. 75% of all HNC cancer types were caused by tobacco or alcohol. Although the cure rate for HNC is really high, around 50 % of concerned patients remain suffering from an advanced disease .
+Head and neck cancer is defined as a group of cancers, concerning the mouth, nose and throat (Figure 1). With over 90%, Squamous cell carcinoma is the most common type in HNC patients. With 5.5 million affected people in 2015 it is the seventh most frequent cancer and the ninth most frequent cause of death. 75% of all HNC cancer types were caused by tobacco or alcohol. Although the cure rate for HNC is really high, around 50 % of concerned patients remain suffering from an advanced disease .
 
-![](images/HNC_Kopf.png)
-
-
-In the century of next generation sequencing, the genome became an interesting target for scientists. Approaches that directly affect important oncogenes often fail due to the fact that these genes play an important role in healthy cells. The researchers in our paper investigated synthetic lethality and synthetic dosage lethality that uses gene interactions to affect tumorous proliferation. Synthetic letahlity is a gene interaction in which single-gene defects are compatible with cell viability, but the combination of gene effects results in cell death. Synthetic dosage lethality occurs, when the overexpression of one gene is combined with the knockout of another gene.
+![Figure 1 | Most affected tissues and organs by head and neck cancer](images/HNC_Kopf.png)
 
 
-![](images/Daisy.png)
+In the century of next generation sequencing, the genome became an interesting target for scientists. Approaches that directly affect important oncogenes often fail due to the fact that these genes play an important role in healthy cells. The researchers in our paper (Jerby-Arnon, L., et al. (2014). "Predicting Cancer-Specific Vulnerability via Data-Driven Detection of Synthetic Lethality." Cell 158(5): 1199-1209.) investigated synthetic lethality and synthetic dosage lethality that uses gene interactions to affect tumorous proliferation. Synthetic letahlity describes a gene interaction in which single-gene defects are compatible with cell viability, but the combination of gene effects results in cell death. Synthetic dosage lethality occurs, when the overexpression of one gene is combined with the knockout of another gene.
+
+
+![Figure 2 | Daisy-System](images/Daisy.png)
 
 
 
-Daisy consists of three statistical approaches, each processing different sub data from a cancer Dataset. The first strategy is “Survival of the fittest”, where just deleted SL-paired genes were selected, that are not in a surviving cancer culture. The second strategy is “functional examination” where SL genes were identified, by knocking out genes, with the additive, that the SL partners are inactive. If the tumor shows decreased proliferation, it accounts for the SL pair group. The third strategy is “pairwise gene co- expression” that is based on the fact that SL pairs are often closely related in biological pathways and therefore exhibit similar occurrence. If a gene pair fulfills every of the three criteria, it might be a potential SL pair according to DAISY. To check for SDL partners the criteria of inactive or active is replaced by under- or overactive, measured through expression numbers and copy number alterations.
+Daisy consists of three statistical approaches (Figure 2), each processing different sub data from a cancer Dataset. The first strategy is “Survival of the fittest”, where just deleted SL-paired genes were selected, that are not in a surviving cancer culture. The second strategy is “functional examination” where SL genes were identified, by knocking out genes, with the additive, that the SL partners are inactive. If the tumor shows decreased proliferation, it accounts for the SL pair group. The third strategy is “pairwise gene co- expression” that is based on the fact that SL pairs are often closely related in biological pathways and therefore exhibit similar occurrence. If a gene pair fulfills every of the three criteria, it might be a potential SL pair according to DAISY. To check for SDL partners the criteria of inactive or active is replaced by under- or overactive, measured through expression numbers and copy number alterations.
 
 ## Milestones
-![](images/milestones.png)
+![Figure 3 | Milestones of our project](images/milestones.png)
 
+
+The strategy of our project consisted of 4 main milestones (Figure 3). At first we familiarized with the data and did the first descriptive statistics in milestone 1. Secondly, we identified potential genes “of interest” (SL and SDL candidates), according to DAISY-System. In our third milestone, the core task of our project was implemented. The identification of SL and SDL pairs was executed using functional examination, survival of the fittest and pairwise co-expression. Lastly, in our fourth milestone we tested logistic regression to predict mutations.
 
 # 1. Data Cleanup & Descriptive Statistics
 
@@ -357,9 +360,9 @@ rm(all_mutations, all_mutated_genes, all_mutated_genes_df, ID_all_highest_30_fre
 
 ## Knockdown
 
-### Checking for NAs and range in HNC patients
+### Overview of kd.ceres values in HNC patients
 ```{r 1_knockdown_NA}
-sum(is.na(kd.ceres.HNC) == TRUE) # NAs
+sum(is.na(kd.ceres.HNC) == TRUE) # Checking for NAs
 range(kd.ceres.HNC)# Range of data
 ```
 
@@ -396,7 +399,7 @@ gghistogram(kd.ceres.HNC.dist, x = "kd_values", xlab = "knockdown values", bins 
 ```
 
 
-To check if  there are more essential genes in HNC, the means of HNC patients and the reference group were compared.
+To check if  there are more essential genes in HNC, the means of HNC patients with the reference group were compared.
 ```{r 1_knockdown_values1}
 # Are there genes that tend to be more essential in HNC?
 esgene1 = kd.ceres.HNC[which(rowMeans(kd.ceres.HNC)< rowMeans(kd.ceres.reference)),]
@@ -412,7 +415,7 @@ esgeneT = as.data.frame(t(esgene1))
 summary(esgeneT$EGFR)
 ```
 
-### Boxplot of 20 generandom genes
+### Boxplot of 20 random genes
 ```{r 1_knockdown_boxplot}
 # Boxplot of 20 of most significiant genes according to knockdown analysis
 boxplot(sample(esgeneT,20, replace = FALSE), xlab = "gene", horizontal =T, main="Knockdown values of 20 random genes",
@@ -425,8 +428,6 @@ boxplot(sample(esgeneT,20, replace = FALSE), xlab = "gene", horizontal =T, main=
 abline(col = c("blue", "red", "black", "orange"),
         lty = 2)
 ```
-
-
 
 
 ### Applying Wilcoxon rank sum test because knockdown values are not normally distributed
@@ -469,10 +470,10 @@ ggplot(comb.ex.cna[, 2:3],
   geom_point()
 ```
 
-To check the perfect ammount of clusters in k-means, an ellbow test was implemented
+To check the perfect ammount of clusters in k-means, an ellbow test was implemented.
 ```{r 1_ellbow method}
 # Ellbow method to find optimal ammount of clusters
-emp = vector() #create an empty vector
+emp = vector() # Create an empty vector
 for (i in 1:10) emp[i] = sum(kmeans(comb.ex.cna[2:3], i)$withinss) # Calculate the sum within squared values for 10 clusters
 emp # Look at the sum within squares for 10 clusters
 
@@ -487,7 +488,6 @@ plot(1:10,
 
 
 Result: The ellbow test shows that 3 clusters are sufficient.
-
 
 K-means were executed and plotted. Afterwards the potential SDL candidates were identified through higher expression values.
 ```{r 1_kmeansclustering}
@@ -962,3 +962,13 @@ Clean the enviroment
 rm(precision, pred, recall, regression.genes, threshhold_ls, inTrain, lrfit, results_df, test.set, threshold_list, train.set)
 ```
 
+# References 
+
+## Articles
+1.) Jerby-Arnon, L., et al. (2014). "Predicting Cancer-Specific Vulnerability via Data-Driven Detection of Synthetic Lethality." Cell 158(5): 1199-1209.
+2.) Ashworth, A., et al. (2011). "Genetic Interactions in Cancer Progression and Treatment." Cell 145(1): 30-38.
+3.) O'Neil, N. J., et al. (2017). "Synthetic lethality and cancer." Nature Reviews Genetics 18: 613.
+	
+## Figures
+Figure 1 - https://crukcambridgecentre.org.uk/patient-care/clinical-research/head-and-neck
+Figure 2 - Jerby-Arnon, L., et al. (2014). "Predicting Cancer-Specific Vulnerability via Data-Driven Detection of Synthetic Lethality." Cell 158(5): 1199-1209.
