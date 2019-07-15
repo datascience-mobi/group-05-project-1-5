@@ -17,13 +17,13 @@ knitr::opts_chunk$set(echo = TRUE,
 library(knitr)      # RMarkdown
 library(rstudioapi)
 library(ggplot2)
-library(ggpubr)     # histograms
+library(ggpubr)     # Histograms
 theme_set(theme_pubr())
-library(png)        # read, write and display images
-library(tidyverse)  # data manipulation
-library(cluster)    # clustering algorithms
-library(factoextra) # clustering algorithms & visualization
-library(igraph)     # networkplot
+library(png)        # Read, write and display images
+library(tidyverse)  # Data manipulation
+library(cluster)    # Clustering algorithms
+library(factoextra) # Clustering algorithms & visualization
+library(igraph)     # Networkplot
 library(caTools)
 library(caret)
 library(data.table)
@@ -111,7 +111,7 @@ mean.expression = rbind(Reference, HNC)
 
 ggqqplot(mean.expression, x = "expression_values",
    color = "sample",
-   palette = c("#FC4E07", "#0073C2FF"), # red and blue
+   palette = c("#FC4E07", "#0073C2FF"), # Red and blue
    ggtheme = theme_pubclean())
 ```
 
@@ -130,7 +130,7 @@ Next we check if the gene expression differs whether a gene has a deleterious mu
 TP53.mut.ID = lapply(1:length(mutation), function(a) {
   dat_picker = mutation[[a]]
   dat_picker = dat_picker[which(dat_picker$isDeleterious == TRUE),]
-  out = ifelse("TP53" %in% dat_picker$Hugo_Symbol, a, NA) # filter all IDs which have a deleterious mutation of TP53
+  out = ifelse("TP53" %in% dat_picker$Hugo_Symbol, a, NA) # Filter all IDs which have a deleterious mutation of TP53
     return(out)
   })
 
@@ -138,8 +138,8 @@ TP53.not_mut.ID = grep("NA", TP53.mut.ID) # ID of samples with no TP53 mutation
 TP53.mut.ID = as.integer(TP53.mut.ID[is.na(TP53.mut.ID) == FALSE]) # ID of samples with TP53 mutation
 
 # Create two vectors of expression values
-exp.TP53.mut = as.numeric(expression["TP53", TP53.mut.ID]) # expression of TP53 deleterious mutated samples
-exp.TP53.not_mut = as.numeric(expression["TP53", TP53.not_mut.ID]) # expression of TP53 not deleterious mutated samples
+exp.TP53.mut = as.numeric(expression["TP53", TP53.mut.ID]) # Expression of TP53 deleterious mutated samples
+exp.TP53.not_mut = as.numeric(expression["TP53", TP53.not_mut.ID]) # Expression of TP53 not deleterious mutated samples
 ```
 Compare the expression values by applying Wilcoxon rank sum test.
 ```{r 1_expression_values6}
@@ -204,11 +204,11 @@ rm(HNC, Reference, mean.expression, TP53.mut.ID, TP53.not_mut.ID, exp.TP53.mut, 
 
 Examination of NA values in the copynumber.HNC data
 ```{r 1_copynumber_NA1}
-# sum up all NAs in each row
+# Sum up all NAs in each row
 NA.rows = apply(copynumber.HNC,1, function(x) {
           sum(is.na(x))
 })
-#define all rows cotaining missing values
+# Define all rows cotaining missing values
 NA.rows = which( NA.rows > 0)
 length(NA.rows)
 ```
@@ -358,7 +358,7 @@ rm(all_mutations, all_mutated_genes, all_mutated_genes_df, ID_all_highest_30_fre
 
 ### Checking for NAs and range in HNC patients
 ```{r 1_knockdown_NA}
-sum(is.na(kd.ceres.HNC) == TRUE) #NAs
+sum(is.na(kd.ceres.HNC) == TRUE) # NAs
 range(kd.ceres.HNC)# Range of data
 ```
 
@@ -397,7 +397,7 @@ To check if  there are more essential genes in HNC, the means of HNC patients an
 ```{r 1_knockdown_values1}
 # Are there genes that tend to be more essential in HNC?
 esgene1 = kd.ceres.HNC[which(rowMeans(kd.ceres.HNC)< rowMeans(kd.ceres.reference)),]
-#Sort essential genes
+# Sort essential genes
 esgene1= esgene1[order(rowMeans(esgene1)),]
 ```
 
@@ -411,7 +411,7 @@ summary(esgeneT$EGFR)
 
 ### Boxplot of 20 generandom genes
 ```{r 1_knockdown_boxplot}
-# boxplot of 20 of most significiant genes according to knockdown analysis
+# Boxplot of 20 of most significiant genes according to knockdown analysis
 boxplot(sample(esgeneT,20, replace = FALSE), xlab = "gene", horizontal =T, main="Knockdown values of 20 random genes",
         xlab="genes",
         ylab="Knockdown values",
@@ -447,16 +447,16 @@ rm(kd.ceres.HNC.dist, kd.ceres.reference, kd.ceres.reference.dist, mean.kd.ceres
 ## k-means clustering of CNA and expression data with normalized values(-reference) for SDL GOI
 To find potential genes for SDL pair detection, clustering through k-means was executed. 
 ```{r 1_kmeans1}
-km.genes = Reduce(intersect, list(rownames(expression.HNC), rownames(copynumber.HNC))) # intersect set of expression and CNA
+km.genes = Reduce(intersect, list(rownames(expression.HNC), rownames(copynumber.HNC))) # Intersect set of expression and CNA
 
-#Create data rame with expression and CNA values
+# Create data rame with expression and CNA values
 km.expression = expr.HNC.norm[km.genes,]
 km.copynumber = cna.HNC.norm[km.genes,]
 km.data = lapply(1:length(ID), function(x) {
   out = data.frame(genes =km.genes, expression = km.expression[,x], copynumber = km.copynumber[,x])
   return (out)
 })
-#Combine rows for k mean clustering
+# Combine rows for k mean clustering
 comb.ex.cna = do.call(rbind, km.data)
 comb.ex.cna = comb.ex.cna[which(comb.ex.cna$copynumber >= 1 & comb.ex.cna$expression >=quantile(comb.ex.cna$expression,0.95)),]
 
@@ -466,12 +466,12 @@ ggplot(comb.ex.cna[,2:3], aes(x= expression, y= copynumber , color = "smooth")) 
 ```
 To check the perfect ammount of clusters in k-means, an ellbow test was implemented
 ```{r 1_ellbow method}
-#ellbow method to find optimal ammount of clusters
+# Ellbow method to find optimal ammount of clusters
 emp = vector() #create an empty vector
-for (i in 1:10) emp[i] = sum(kmeans(comb.ex.cna[2:3], i)$withinss) #calculate the sum within squared values for 10 clusters
-emp #look at the sum within squares for 10 clusters 
-#Plotting of Ellbow method
+for (i in 1:10) emp[i] = sum(kmeans(comb.ex.cna[2:3], i)$withinss) # Calculate the sum within squared values for 10 clusters
+emp # Look at the sum within squares for 10 clusters
 
+# Plotting of Ellbow method
 plot(1:10,
      emp,
      type = 'b',
@@ -486,7 +486,7 @@ The ellbow test shows that 3 clusters are sufficient
 K-means were executed and plotted. Afterwards the potential SDL candidates were identified through higher expression values.  
 ```{r 1_kmeansclustering}
 # Fitting K-Means to the dataset
-kmeans = kmeans(x = comb.ex.cna[,2:3], centers = 3,iter.max = 1000, nstart = 1) #see elbow method (k = 3) 
+kmeans = kmeans(x = comb.ex.cna[,2:3], centers = 3,iter.max = 1000, nstart = 1) # See elbow method (k = 3) 
 y_kmeans = kmeans$cluster 
 
 # Visualising the clusters
@@ -504,14 +504,14 @@ clusplot(comb.ex.cna,
          xlab = 'Expression',
          ylab = 'CNA')
 
-comb.ex.cna = cbind(comb.ex.cna, y_kmeans)#combine kmeans with genes
-#sort comb.ex.cna data decresing for selecting adequate number of cluster
+comb.ex.cna = cbind(comb.ex.cna, y_kmeans)# Combine kmeans with genes
+# Sort comb.ex.cna data decresing for selecting adequate number of cluster
 comb.ex.cna = comb.ex.cna[order(comb.ex.cna$expression,decreasing =TRUE),]
 
-#Filtering of the most expressed and alterated genes
+# Filtering of the most expressed and alterated genes
 goi.sdl = comb.ex.cna[which(comb.ex.cna$y_kmeans == comb.ex.cna[1,4]),]
 
-#sort dataframe 
+# Sort dataframe 
 goi.sdl = goi.sdl[order(goi.sdl$expression,decreasing=TRUE),]
 kable(goi.sdl[1:5,])
 
@@ -523,15 +523,15 @@ rm(emp, i, km.genes, y_kmeans, kmeans, km.copynumber, km.data, km.expression, co
 
 Create a dataframe with data for the heatmap.
 ```{r 2_SLgoi1, fig.width=8, fig.height=10}
-mutation.HNC.df = do.call(rbind, mutation.HNC) # all mutation data of HNC samples in one dataframe
-heatmap.genes = as.data.frame(table(mutation.HNC.df$Hugo_Symbol)) # dataframe with all mutated genes in HNC samples just once
+mutation.HNC.df = do.call(rbind, mutation.HNC) # All mutation data of HNC samples in one dataframe
+heatmap.genes = as.data.frame(table(mutation.HNC.df$Hugo_Symbol)) # Dataframe with all mutated genes in HNC samples just once
 
 heatmap.data = as.data.frame(sapply(1:(length(ID)), function(a) {
-  out = ifelse(heatmap.genes$Var1 %in% mutation.HNC[[a]]$Hugo_Symbol, 1, 0) # per HNC sample: every gene which is mutated gets a 1, otherwise a 0
+  out = ifelse(heatmap.genes$Var1 %in% mutation.HNC[[a]]$Hugo_Symbol, 1, 0) # Per HNC sample: every gene which is mutated gets a 1, otherwise a 0
   return(out)
 }))
 
-# define row and column names
+# Define row and column names
 rownames(heatmap.data) = heatmap.genes$Var1
 colnames(heatmap.data) = ID
 
@@ -539,7 +539,7 @@ colnames(heatmap.data) = ID
 heatmap.data$sum = apply(heatmap.data, 1, sum)
 heatmap.data = heatmap.data[order(-heatmap.data$sum), 1:27] 
 
-# heatmap of the most frequently deleterious mutated genes in HNC samples
+# Heatmap of the most frequently deleterious mutated genes in HNC samples
 heatmap(data.matrix(heatmap.data)[1:40,],
         Rowv=NA,
         Colv=NA,
@@ -565,17 +565,17 @@ goi.lit = data.frame(Gene = c("CDKN2A", "TP53", "CCND1", "EGFR", "PIK3CA", "PTEN
                      "Mutation frequency" = c(22, 72, 0.6, 4, 18, 3, 23, 7, 18, 16, 12),
                      "CNA frequency" = c(32, 1.4, 25, 11, 21, 4, 8, 1, 4, 0.4, 0.8)) 
 
-heatmap_position = sapply(1:nrow(goi.lit), function(a) { # search for the position of goi.lit in mutated genes of HNC samples
+heatmap_position = sapply(1:nrow(goi.lit), function(a) { # Search for the position of goi.lit in mutated genes of HNC samples
   position = which(rownames(heatmap.data) == goi.lit$Gene[a])
-  if(length(position) == 0) {position = NA} # if gene is not part of the genes mutated in HNC samples its position is replaced with NA
+  if(length(position) == 0) {position = NA} # If gene is not part of the genes mutated in HNC samples its position is replaced with NA
   return(position)
 })
 
-goi.lit$"Heatmap position" = heatmap_position # add heatmap position to goi.lit
+goi.lit$"Heatmap position" = heatmap_position # Add heatmap position to goi.lit
 rownames(goi.lit) = goi.lit$Gene
 goi.lit$Gene = NULL
 goi.lit = goi.lit[order(goi.lit$"Heatmap position"),]
-kable(goi.lit) # show a table of goi.lit
+kable(goi.lit) # Show a table of goi.lit
 ```
 
 Because our most frequent mutated genes almost aproximately match with frequent mutations from literature we choose the 5 genes with most frequent mutations in HNC samples.
@@ -597,18 +597,18 @@ To examine gene pairs A and B which fulfill the criteria of SoF and functional e
 ```{r 3_Wilcox}
 'Daisy.Wilcox' = function(input_genes,input_data, inactive_overactive, less_greater){
   Daisy_Wilcox = lapply(1:length(input_genes), function(m) {
-  goi = input_genes[m] # set 1 of 5 goi
-  # depending on SL or SDL partner search gene B needs to be inactive (SL) or overactive (SDL)
+  goi = input_genes[m] # Set 1 of 5 goi
+  # Depending on SL or SDL partner search gene B needs to be inactive (SL) or overactive (SDL)
   if(inactive_overactive == 1) { # inactive_overactive == 1 chooses overactive
     mean.exp.goi = mean(t(expression[goi,]))
-    exp.goi.norm = expression[goi,] - mean.exp.goi # normalised expression values of goi
+    exp.goi.norm = expression[goi,] - mean.exp.goi # Normalised expression values of goi
     mut_overa.ID = lapply(1:ncol(expression), function(a) {
-    out = if(exp.goi.norm[goi, a] > 0 & copynumber[goi,a] > 0.3) {a} else {NA} # filter all IDs which are overactive: overexpressed and CNA > 0,3
+    out = if(exp.goi.norm[goi, a] > 0 & copynumber[goi,a] > 0.3) {a} else {NA} # Filter all IDs which are overactive: overexpressed and CNA > 0,3
     return(out)
     })
   } else { # inactive_overactive == 0 chooses inactive
     mut_overa.ID = lapply(1:length(mutation), function(a) {
-    out = ifelse(goi %in% mutation[[a]]$Hugo_Symbol, a, NA) # filter all IDs which have a mutation of goi
+    out = ifelse(goi %in% mutation[[a]]$Hugo_Symbol, a, NA) # Filter all IDs which have a mutation of goi
     return(out)
     })
   }
@@ -620,9 +620,9 @@ To examine gene pairs A and B which fulfill the criteria of SoF and functional e
     mut_overa.data = t(input_data[b, mut_overa.ID])
     not_mut_overa.data = t(input_data[b, not_mut_overa.ID])
     if (less_greater == 1) {
-      p = wilcox.test(mut_overa.data, not_mut_overa.data, alternative = "greater")$p.value # one sided (greater) Wilcoxon Sum Rank Test 
+      p = wilcox.test(mut_overa.data, not_mut_overa.data, alternative = "greater")$p.value # One sided (greater) Wilcoxon Sum Rank Test 
     } else {
-      p = wilcox.test(mut_overa.data, not_mut_overa.data, alternative = "less")$p.value # one sided (greater) Wilcoxon Sum Rank Test
+      p = wilcox.test(mut_overa.data, not_mut_overa.data, alternative = "less")$p.value # One sided (greater) Wilcoxon Sum Rank Test
     }
     
   })
@@ -639,19 +639,19 @@ To examine gene pairs A and B which fulfill the criteria of SoF and functional e
 To examine gene pairs A and B which fulfill the criteria of gene co expresssion we performe a Spearman correlation test on the expression data. We have 5 inactive genes (goi.SL) and 5 overactive genes (goi.SDL) which are defined as genes A The correlation test now returns all genes B that correlate to gene A in a significant manner (p<0.05).
 ```{r 3_Spearman}
 'Daisy.Spearman' = function(input_genes){
-  Daisy_Spearman = lapply(1:length(input_genes), function(m) { # build up a list with the 5 goi, first       lapply: goes through the code for each gene A
+  Daisy_Spearman = lapply(1:length(input_genes), function(m) { # Build up a list with the 5 goi; lapply: goes through the code for each gene A
   goi = input_genes[m]
 
-  p.value = sapply(1:nrow(expression), function(a){  # creation of a list with the length of the expression   data, for the reacent goi, go through every gene and calculate cor.test
-    expression.goi =t(expression[goi,])           # variable containing expressiondata of the goi (gene A)
-    expression.GeneB =t(expression[a,])           # variable containing all other genes (gene B)
-    p = cor.test(expression.goi,expression.GeneB, alternative = "greater", method = "spearman", exact = FALSE)$p.value # one sided spearman correlation test  
+  p.value = sapply(1:nrow(expression), function(a){  # Creation of a list with the length of the expression data, for the reacent goi, go through every gene and calculate cor.test
+    expression.goi =t(expression[goi,])           # Variable containing expressiondata of the goi (gene A)
+    expression.GeneB =t(expression[a,])           # Variable containing all other genes (gene B)
+    p = cor.test(expression.goi,expression.GeneB, alternative = "greater", method = "spearman", exact = FALSE)$p.value # One sided spearman correlation test  
   })
   
-  # return a dataframe with the columns genes(HugoSymbols) and p_values (p.values)
+  # Return a dataframe with the columns genes(HugoSymbols) and p_values (p.values)
   out = data.frame(genes = rownames(expression), p_value = p.value)
-  out = out[which(out$p_value < 0.05),] # filter for significant p.values
-  out = out[which(out$genes != goi),]   # select onl these wich are not the same gene as the goi (would be a corr of 1)
+  out = out[which(out$p_value < 0.05),] # Filter for significant p.values
+  out = out[which(out$genes != goi),]   # Select onl these wich are not the same gene as the goi (would be a corr of 1)
   return(out)
   })
   names(Daisy_Spearman) = input_genes
@@ -667,17 +667,17 @@ Both functions return a list, which contains the five genes of interest, each co
 SoF
 ```{r 3_SL_SoF}
 SL.SoF = Daisy.Wilcox(goi.SL, copynumber, inactive_overactive = 0, less_greater = 1) # SoF, inactive, one sided Wilcoxon rank test, alternative = "greater"
-head(SL.SoF[[1]]) # example of SL SoF for first GOI (TP53)
+head(SL.SoF[[1]]) # Example of SL SoF for first GOI (TP53)
 ```
 Functional examination
 ```{r 3_SL_functional_examination}
 SL.functional.examination = Daisy.Wilcox(goi.SL, kd.ceres, inactive_overactive = 0, less_greater = 0) # Functional examination, inactive, one sided Wilcoxon rank test, alternative = "less"
-head(SL.functional.examination[[1]]) # example of SL functional examination for first GOI (TP53)
+head(SL.functional.examination[[1]]) # Example of SL functional examination for first GOI (TP53)
 ```
 Gene coexpression
 ```{r 3_SL_coexpression}
 SL.coexpression = Daisy.Spearman(goi.SL)
-head(SL.coexpression[[1]]) # example of SL coexpression for first GOI (TP53)
+head(SL.coexpression[[1]]) # Example of SL coexpression for first GOI (TP53)
 ```
 
 ### SDL-parter
@@ -704,10 +704,10 @@ Define function to converge SL/SDL sets.
     dat_picker.functional_examination = functional.examination[[a]]
     dat_picker.coexpression = coexpression[[a]]
     partnergenes = Reduce(intersect, list(dat_picker.SoF$genes, dat_picker.functional_examination$genes, dat_picker.coexpression$genes)) # Intersect of genes from all three tests
-    out = data.frame(genes = partnergenes, # column with reduced genes
-                     SoF = dat_picker.SoF[which(dat_picker.SoF$genes %in% partnergenes),"p_value"], # column with p value from SoF
-                     functional_examination = dat_picker.functional_examination[which(dat_picker.functional_examination$genes %in% partnergenes),"p_value"], # column with p value from functional examination
-                     coexpression = dat_picker.coexpression[which(dat_picker.coexpression$genes %in% partnergenes),"p_value"]) # column with p value from coexpression
+    out = data.frame(genes = partnergenes, # Column with reduced genes
+                     SoF = dat_picker.SoF[which(dat_picker.SoF$genes %in% partnergenes),"p_value"], # Column with p value from SoF
+                     functional_examination = dat_picker.functional_examination[which(dat_picker.functional_examination$genes %in% partnergenes),"p_value"], # Column with p value from functional examination
+                     coexpression = dat_picker.coexpression[which(dat_picker.coexpression$genes %in% partnergenes),"p_value"]) # Column with p value from coexpression
     return(out)
   })
   names(partner) = input_genes
@@ -729,22 +729,22 @@ kable(data.frame("SL genes" = names(SL.partner),
 
 Creation of a function for transforming given data into a format iGraph can work with and plotting of the network
 ```{r 3_network}
-'network' = function(X.partner,width,node.color,frame.color,node.size,Titel,label,GOI){#(SL/SDL.partner,number,string,string,number,string,NA oder names(plot))
+'network' = function(X.partner,width,node.color,frame.color,node.size,Titel,label,GOI){ # (SL/SDL.partner,number,string,string,number,string,NA oder names(plot))
   
-  color.vector = c("darkred", "darkgreen", "turquoise", "yellow", "orange") #define colours
-# transform data into a dataframe with 3 colums for each GOI  
+  color.vector = c("darkred", "darkgreen", "turquoise", "yellow", "orange") # Define colours
+  # transform data into a dataframe with 3 colums for each GOI  
   edgelist = lapply(1:length(X.partner), function(a){
     dat_picker = X.partner[[a]]
-    edge.list = data.frame(Gene.A = names(X.partner)[a], Gene.B = dat_picker$genes, colours = color.vector[a]) #the 3 columns
+    edge.list = data.frame(Gene.A = names(X.partner)[a], Gene.B = dat_picker$genes, colours = color.vector[a]) # 3 columns
   })
-  edge.list = do.call(rbind, edgelist)#combine all goi-dataframes to one.
+  edge.list = do.call(rbind, edgelist) # Combine all goi-dataframes to one.
 
-  edge.list$colours = as.character(edge.list$colours) #after the lapply, column "colours" has class 'factor'. For the plottingfunction it must be character 
+  edge.list$colours = as.character(edge.list$colours) # After the lapply, column "colours" has class 'factor'. For the plottingfunction it must be character 
   
-  net = graph_from_data_frame(edge.list, directed = T) # tranform the dataframe into an iGraph object
-  layout1 = layout_with_kk(net)                        # given layout
+  net = graph_from_data_frame(edge.list, directed = T) # Tranform the dataframe into an iGraph object
+  layout1 = layout_with_kk(net)                        # Given layout
 
-#plotting parameters are defined. vertex= Genes edges = interactions 
+  # Plotting parameters are defined. vertex= Genes edges = interactions 
   plot(net, layout = layout1, rescale = T,
        ylim = c(-0.9,1),
        xlim = c(-0.1,-0.1),
@@ -759,12 +759,12 @@ Creation of a function for transforming given data into a format iGraph can work
        vertex.label = label,
        margin = 0.1)
 
-#adding a legend to the plot
+  # Adding a legend to the plot
   legend (x = 1.2,
           y = 1, GOI,
           fill = c("darkred", "darkgreen", "turquoise", "yellow", "orange"))
 
-# add titel to the graph
+  # Add titel to the graph
   title(Titel,cex.main=3,col.main="black ")
 
 }
@@ -786,29 +786,29 @@ Because there are to many SL/SDL partner to plot a network we reduce SL/SDL part
 To do so, we reduce the number of partner genes for better plotting without removing genes which are connected to more than one GOI.
 ```{r 3_reduce_partner}
 'reduce.partner' = function(list){ 
-  reduced_partner = lapply(1:length(list), function(a){ # go through every element of SL/SDL partner
+  reduced_partner = lapply(1:length(list), function(a){ # Go through every element of SL/SDL partner
     dat_picker = list[[a]]
     
-    if (nrow(dat_picker) > 20) { # (1) if length of dat_picker is larger than 20 reduce to the 20 most significant plus the genes we want to keep
+    if (nrow(dat_picker) > 20) { # (1) If length of dat_picker is larger than 20 reduce to the 20 most significant plus the genes we want to keep
       
-      dat_picker$order = apply(dat_picker[,2:4], 1, mean) # create an extra column with the mean p value of all 3 tests
-      ordered_data = dat_picker[order(dat_picker$order),][,1:4] # order the partner genes after this mean value from most to least significant p value
+      dat_picker$order = apply(dat_picker[,2:4], 1, mean) # Create an extra column with the mean p value of all 3 tests
+      ordered_data = dat_picker[order(dat_picker$order),][,1:4] # Order the partner genes after this mean value from most to least significant p value
       
       gene_intersect = lapply(1:length(list), function(b){ 
-          as.list(Reduce(intersect, list(dat_picker$genes), list[[b]]$genes)) # search for genes that are partner for more than one GOI
+          as.list(Reduce(intersect, list(dat_picker$genes), list[[b]]$genes)) # Search for genes that are partner for more than one GOI
       })
-      gene_intersect[a] = NULL # remove intersect of the GOI partner genes with itself
-      keep_genes = c(gene_intersect[[1]], gene_intersect[[2]], gene_intersect[[3]], gene_intersect[[4]]) # combine all the genes in a list
+      gene_intersect[a] = NULL # Remove intersect of the GOI partner genes with itself
+      keep_genes = c(gene_intersect[[1]], gene_intersect[[2]], gene_intersect[[3]], gene_intersect[[4]]) # Combine all the genes in a list
       position = sapply(1:length(keep_genes), function(c){
         which(as.character(ordered_data$genes) == keep_genes[c])
       })
-      position = position[which(position > 20)] # partner genes that are already in the first 20 genes don´t need to be chosen
+      position = position[which(position > 20)] # Partner genes that are already in the first 20 genes don´t need to be chosen
       
-      if(length(position) > 3) {position = position[1:3]} # if there are still more than 3 extra genes only choose the first 5
+      if(length(position) > 3) {position = position[1:3]} # If there are still more than 3 extra genes only choose the first 5
       out = ordered_data[c(1:20, position),]
-      return(out) # return reduced data
+      return(out) # Return reduced data
     } else {
-      return(ordered_data) # (2) if length of dat_picker is smaller than 20 return data unreduced 
+      return(ordered_data) # (2) If length of dat_picker is smaller than 20 return data unreduced 
     }
   })
   names(reduced_partner) = names(list)
@@ -867,17 +867,17 @@ head(regression.data)
 
 ## Making a linear based logistic regression
 ```{r 4_factor_mutation}
-regression.data$mutation = factor(regression.data$mutation, levels = c("FALSE", "TRUE")) #reformat the data because strings can not be an input for a machine learning model
+regression.data$mutation = factor(regression.data$mutation, levels = c("FALSE", "TRUE")) # Reformat the data because strings can not be an input for a machine learning model
 head(regression.data)
 ```
 
 ## Split the data into train and test-data
 ```{r 4_split_data}
 inTrain = createDataPartition(y = regression.data$mutation, p = .75, list = FALSE)
-train.set = regression.data[inTrain,] #only get training data
-rownames(train.set) = train.set$genes #reformat the rownames
-train.set = train.set[,2:ncol(train.set)] #get rid of the gennames becaue they are now the rownames
-head(train.set) #check the data
+train.set = regression.data[inTrain,] # Only get training data
+rownames(train.set) = train.set$genes # Reformat the rownames
+train.set = train.set[,2:ncol(train.set)] # Get rid of the gennames becaue they are now the rownames
+head(train.set) # Check the data
 
 test.set = regression.data[-inTrain,]
 rownames(test.set) = test.set$genes
@@ -895,18 +895,18 @@ summary(lrfit)
 ## Evaluate the model for the performance
 ```{r 4_test}
 pred = predict(lrfit,newdata=test.set,type="response")
-hist(pred) #look at the predictions
+hist(pred) # Look at the predictions
 ```
 
 ## Make a nice plot to evaluate the precision and the recall
 ```{r 4_treshhold}
-threshhold_ls = seq(min(pred), max(pred), by=0.001) #make a thresshold list
+threshhold_ls = seq(min(pred), max(pred), by=0.001) # Make a thresshold list
 threshold_list = lapply(seq_along(threshhold_ls), function(a) table(pred>threshhold_ls[a], test.set$mutation))
 ```
 
 ## Calculate the precision values
 ```{r 4_precision}
-results_df = lapply(1:length(threshold_list), function(a) { #make a df out of the list of lists
+results_df = lapply(1:length(threshold_list), function(a) { # Make a df out of the list of lists
   threshold = threshold_list[[a]]
   threshold_value = threshhold_ls[[a]]
   
@@ -916,17 +916,16 @@ results_df = lapply(1:length(threshold_list), function(a) { #make a df out of th
   return(df_prec_recall)
 })
 
-results_df = rbindlist(results_df) #bind all the lists together
-recall = apply(results_df, 1, function(x){ x[["TP"]]/(x[["TP"]]+x[["FN"]])}) #calculate the recall
-precision = apply(results_df, 1, function(x){ x[["TP"]]/(x[["TP"]]+x[["FP"]])}) #calculate the precision
-results_df$recall = recall #bind recall to the data
-results_df$precision = precision #bind precision to the data
-head(results_df) #look at the data
+results_df = rbindlist(results_df) # Bind all the lists together
+recall = apply(results_df, 1, function(x){ x[["TP"]]/(x[["TP"]]+x[["FN"]])}) # Calculate the recall
+precision = apply(results_df, 1, function(x){ x[["TP"]]/(x[["TP"]]+x[["FP"]])}) # Calculate the precision
+results_df$recall = recall # Bind recall to the data
+results_df$precision = precision # Bind precision to the data
+head(results_df) # Look at the data
 ```
 
 ## Plot the data
 ```{r 4_plot}
-# pdf(paste0(root.dir, "/", "190711_LinearModel_LogRegression_PrecisionOverview.pdf"), width = 15)
 ggplot(results_df, aes(recall,precision)) + 
   geom_point() + 
   geom_line() + 
@@ -940,5 +939,4 @@ ggplot(results_df, aes(recall,precision)) +
         axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
         legend.title= element_blank(),
         strip.text.y = element_text(angle = 0))
-# dev.off()
 ```
