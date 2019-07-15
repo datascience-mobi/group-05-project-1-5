@@ -284,28 +284,44 @@ rm(NA.rows, NA.rows.ref, copynumber.HNC.norm, copynumber.HNC.mean, copynumber.re
 
 ### Find Mutations with the highest frequencies
 
-Melt all mutation matrices together and find most often mutated genes over all samples
+Melt all mutation matrices together as data frame and find out most frequent mutations
 ```{r 1_muation_frequency1}
 all_mutations = do.call(rbind,mutation)
 all_mutated_genes = table(all_mutations$Hugo_Symbol)
 all_mutated_genes_df = as.data.frame(all_mutated_genes)
+```
+
+Order the found mutations by frequencies and extract 30 most frequent
+```{r}
 ID_all_highest_frequencies = head(order(all_mutated_genes_df[["Freq"]], decreasing = TRUE), 30)
 all_mutated_genes_df_highest_30 = all_mutated_genes_df[which(rownames(all_mutated_genes_df) %in% ID_all_highest_frequencies), ]
+HEAD
 ID_all_highest_30_frequencies = order(all_mutated_genes_df_highest_30["Freq"], decreasing = TRUE) 
+all_mutated_genes_highest_30_ordered = all_mutated_genes_df_highest_30[ID_all_highest_30_frequencies, ]
+```
+
+Name the newly established data frame for the look
+```{r}
+ID_all_highest_30_frequencies = order(all_mutated_genes_df_highest_30["Freq"], decreasing = TRUE)
 all_mutated_genes_df_highest_30_ordered = all_mutated_genes_df_highest_30[ID_all_highest_30_frequencies, ]
 rownames(all_mutated_genes_df_highest_30_ordered) = 1:30
 colnames_ordered = c("Gene", "Freq")
 colnames(all_mutated_genes_df_highest_30_ordered) = colnames_ordered
 ```
 
-Melt only HNC sample mutation matrices together and find most often mutated genes 
-```{r  1_muation_frequency2}
+Melt only HNC sample mutation matrices together and find out most frequent mutations
+
+```{r}
 HNC_mutations = do.call(rbind, mutation.HNC)
 HNC_mutated_genes = table(HNC_mutations$Hugo_Symbol)
 HNC_mutated_genes_df = as.data.frame(HNC_mutated_genes)
-ID_HNC_highest_frequencies = head(order(HNC_mutated_genes_df[["Freq"]], decreasing = TRUE), 27)  
+```
+
+Order the found mutations by frequencies and name the data frame
+```{r}
+ID_HNC_highest_frequencies = head(order(HNC_mutated_genes_df[["Freq"]], decreasing = TRUE), length(ID_HNC_highest_frequencies))  
 HNC_mutated_genes_df_highest_ordered = HNC_mutated_genes_df[ID_HNC_highest_frequencies, ]
-rownames(HNC_mutated_genes_df_highest_ordered) = 1:27
+rownames(HNC_mutated_genes_df_highest_ordered) = 1:length(ID_HNC_highest_frequencies)
 colnames(HNC_mutated_genes_df_highest_ordered) = colnames_ordered
 ```
 
