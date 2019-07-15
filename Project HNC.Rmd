@@ -525,7 +525,12 @@ clusplot(comb.ex.cna,
          main = paste('Clusters of Genes'),
          xlab = 'Expression',
          ylab = 'CNA')
+```
 
+The Plot "Cluster of genes" features the 3 clusters of values from expression and CNA data. Due to little variance between the data pairs, the intersection set is comparatively big. 
+
+In order to define SDL candidates, the cluster with highest expression values was chosen and filtered again according to expression numbers. 
+```{r 1_goiSDL}
 comb.ex.cna = cbind(comb.ex.cna, y_kmeans)# Combine kmeans with genes
 # Sort comb.ex.cna data decresing for selecting adequate number of cluster
 comb.ex.cna = comb.ex.cna[order(comb.ex.cna$expression,decreasing =TRUE),]
