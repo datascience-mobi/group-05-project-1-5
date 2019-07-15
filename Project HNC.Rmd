@@ -356,13 +356,13 @@ Due to the needed conditions in the following "Daisy-tests" we now clean the mut
 ```{r 1_muation_cleanmutation}
 # Generating a function that searches all elements a of our mutation data set which are isDeleterious
 'mutation.clean' = function(data){
-  cleaned_data = lapply(1:length(data), function(a) {
-    dat_picker = data[[a]]
-    dat_picker = dat_picker[, c("Hugo_Symbol", "isDeleterious")]
-    dat_picker = dat_picker[which(dat_picker$isDeleterious == TRUE),]
+  cleaned_data = lapply(1:length(data), function(a) { # Data will be mutation (length of 544) or mutation.HNC (length of 27)
+    dat_picker = data[[a]] # Pick the element of the list on position 'a'
+    dat_picker = dat_picker[, c("Hugo_Symbol", "isDeleterious")] # Choose only the columns with gene name and whether they have a deleterious mutation
+    dat_picker = dat_picker[which(dat_picker$isDeleterious == TRUE),] # Choose only deleterious mutations
     return(dat_picker)
   })
-  names(cleaned_data) = names(data)
+  names(cleaned_data) = names(data) # Keep the names of the input data
   return(cleaned_data)
 }
 # Apply the new function on our two mutation data sets in order to clean them
