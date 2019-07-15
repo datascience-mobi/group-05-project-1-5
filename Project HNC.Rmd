@@ -364,6 +364,13 @@ range(kd.ceres.HNC)# Range of data
 
 ### Examine knockdown values
 ```{r 1_knockdown_values_dist}
+# Definition of a compare group
+kd.ceres.reference = kd.ceres[ , which(colnames(kd.ceres) %!in% ID)]
+
+# Defining mean of knockdown values from comparegroup and HNC patients
+mean.kd.ceres.reference = apply(kd.ceres.reference, 1, mean)
+mean.kd.ceres.HNC = apply(kd.ceres.HNC, 1, mean)
+
 # Checking if knockdown values are normally distributed
 kd.ceres.HNC.dist = data.frame(kd_values = mean.kd.ceres.HNC, sample = "Knockdown HNC")
 kd.ceres.reference.dist = data.frame(kd_values = mean.kd.ceres.reference, sample = "reference HNC")
@@ -388,13 +395,6 @@ gghistogram(kd.ceres.HNC.dist, x = "kd_values", xlab = "knockdown values", bins 
 
 To check if  there are more essential genes in HNC, the means of HNC patients and the reference group were compared.
 ```{r 1_knockdown_values1}
-# Definition of a compare group
-kd.ceres.reference = kd.ceres[ , which(colnames(kd.ceres) %!in% ID)]
-
-# Defining mean of knockdown values from comparegroup and HNC patients
-mean.kd.ceres.reference = apply(kd.ceres.reference, 1, mean)
-mean.kd.ceres.HNC = apply(kd.ceres.HNC, 1, mean)
-
 # Are there genes that tend to be more essential in HNC?
 esgene1 = kd.ceres.HNC[which(rowMeans(kd.ceres.HNC)< rowMeans(kd.ceres.reference)),]
 #Sort essential genes
@@ -445,36 +445,46 @@ rm(kd.ceres.HNC.dist, kd.ceres.reference, kd.ceres.reference.dist, mean.kd.ceres
 # 2. Identify genes of interest
 
 ## k-means clustering of CNA and expression data with normalized values(-reference) for SDL GOI
-
+To find potential genes for SDL pair detection, clustering through k-means was executed. 
 ```{r 1_kmeans1}
 km.genes = Reduce(intersect, list(rownames(expression.HNC), rownames(copynumber.HNC))) # intersect set of expression and CNA
+
+#Create data rame with expression and CNA values
 km.expression = expr.HNC.norm[km.genes,]
 km.copynumber = cna.HNC.norm[km.genes,]
 km.data = lapply(1:length(ID), function(x) {
   out = data.frame(genes =km.genes, expression = km.expression[,x], copynumber = km.copynumber[,x])
-  return (out) #Create data rame with expression and CNA values
+  return (out)
 })
 #Combine rows for k mean clustering
 comb.ex.cna = do.call(rbind, km.data)
 comb.ex.cna = comb.ex.cna[which(comb.ex.cna$copynumber >= 1 & comb.ex.cna$expression >=quantile(comb.ex.cna$expression,0.95)),]
 
-# Plotting of normalized expression valuess against CNA data. 
+# Plotting of normalized expression valuess against CNA data for a short overview. 
 ggplot(comb.ex.cna[,2:3], aes(x= expression, y= copynumber , color = "smooth")) +
   geom_point()
-
+```
+To check the perfect ammount of clusters in k-means, an ellbow test was implemented
+```{r 1_ellbow method}
 #ellbow method to find optimal ammount of clusters
 emp = vector() #create an empty vector
 for (i in 1:10) emp[i] = sum(kmeans(comb.ex.cna[2:3], i)$withinss) #calculate the sum within squared values for 10 clusters
 emp #look at the sum within squares for 10 clusters 
 #Plotting of Ellbow method
+
 plot(1:10,
      emp,
      type = 'b',
      main = paste('The Elbow Method'),
      xlab = 'Number of clusters',
      ylab = 'EMP') 
-# shows 3 clusters are sufficient
+```
 
+
+The ellbow test shows that 3 clusters are sufficient
+
+K-means were executed and plotted. Afterwards the potential SDL candidates were identified through higher expression values.  
+```{r 1_kmeansclustering}
 # Fitting K-Means to the dataset
 kmeans = kmeans(x = comb.ex.cna[,2:3], centers = 3,iter.max = 1000, nstart = 1) #see elbow method (k = 3) 
 y_kmeans = kmeans$cluster 
@@ -498,7 +508,7 @@ comb.ex.cna = cbind(comb.ex.cna, y_kmeans)#combine kmeans with genes
 #sort comb.ex.cna data decresing for selecting adequate number of cluster
 comb.ex.cna = comb.ex.cna[order(comb.ex.cna$expression,decreasing =TRUE),]
 
-#Filtering of the most expressed and alterated
+#Filtering of the most expressed and alterated genes
 goi.sdl = comb.ex.cna[which(comb.ex.cna$y_kmeans == comb.ex.cna[1,4]),]
 
 #sort dataframe 
