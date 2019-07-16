@@ -28,7 +28,6 @@ library(igraph)     # Networkplot
 library(caTools)
 library(caret)
 library(data.table)
-
 ```
 ```{r wd, eval = FALSE, include = FALSE}
 # Set working directiory
@@ -36,7 +35,7 @@ root.dir = dirname(rstudioapi::getSourceEditorContext()$path)
 ```
 
 # General Introduction
-Head and neck cancer is defined as a group of cancers, concerning the mouth, nose and throat (Figure 1). With over 90%, Squamous cell carcinoma is the most common type in HNC patients. With 5.5 million affected people in 2015 it is the seventh most frequent cancer and the ninth most frequent cause of death. 75% of all HNC cancer types were caused by tobacco or alcohol. Although the cure rate for HNC is really high, around 50 % of concerned patients remain suffering from an advanced disease .
+Head and neck cancer is defined as a group of cancers, concerning the mouth, nose and throat (Figure 1). With over 90%, Squamous cell carcinoma is the most common type in HNC patients. With 5.5 million affected people in 2015 it is the seventh most frequent cancer and the ninth most frequent cause of death. 75% of all HNC cancer types were caused by tobacco or alcohol. Although the cure rate for HNC is really high, around 50 % of concerned patients remain suffering from an advanced disease.
 
 ![Most affected tissues and organs by head and neck cancer](images/HNC_Kopf.png)
 
@@ -44,7 +43,7 @@ Head and neck cancer is defined as a group of cancers, concerning the mouth, nos
 In the century of next generation sequencing, the genome became an interesting target for scientists. Approaches that directly affect important oncogenes often fail due to the fact that these genes play an important role in healthy cells. The researchers in our paper (Jerby-Arnon, L., et al. (2014). "Predicting Cancer-Specific Vulnerability via Data-Driven Detection of Synthetic Lethality." Cell 158(5): 1199-1209.) investigated synthetic lethality and synthetic dosage lethality that uses gene interactions to affect tumorous proliferation. Synthetic letahlity describes a gene interaction in which single-gene defects are compatible with cell viability, but the combination of gene effects results in cell death. Synthetic dosage lethality occurs, when the overexpression of one gene is combined with the knockout of another gene.
 
 
-![Daisy-System](images/Daisy.png)
+![Daisy-Workflow](images/Daisy.png)
 
 
 
