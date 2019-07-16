@@ -960,11 +960,13 @@ network(SDL.partner.reduced,4,"grey","grey",12,"Network of SDL interaction (redu
         goi.SDL)
 ```
 
+In Conclusion, the search for potential SL and SDL partner genes led us to our two main networks depicted above. Most of the found SL/SDL partners play crucial roles in key steps of cell development, for example like fostering transcription and translation or directly influencing the cell organization. This explains why the tested tumor cells died after a knockdown/knockout of those genes and why they became essential for the cells.
+
 # 4. Mutation prediction via logistical regression
 
 ## Prepare data for regression model
 ```{r 4_df}
-# Reduce all genes to them of which we have expression, copynumber and knockdown data.
+# Reduce all genes to those of which we have expression, copynumber and knockdown data.
 regression.genes = Reduce(intersect,
                           list(rownames(expression),
                                rownames(copynumber),
