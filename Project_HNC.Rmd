@@ -294,7 +294,7 @@ all_mutated_genes_df = as.data.frame(all_mutated_genes)
 ```
 
 Order the found mutations by frequencies and extract 30 most frequent
-```{r}
+```{r 1_muation_frequency2}
 ID_all_highest_frequencies = head(order(all_mutated_genes_df[["Freq"]], decreasing = TRUE), 30)
 all_mutated_genes_df_highest_30 = all_mutated_genes_df[which(rownames(all_mutated_genes_df) %in% ID_all_highest_frequencies), ]
 ID_all_highest_30_frequencies = order(all_mutated_genes_df_highest_30["Freq"], decreasing = TRUE) 
@@ -303,7 +303,7 @@ head(all_mutated_genes_highest_30_ordered)
 ```
 
 Name the newly established data frame for the look
-```{r}
+```{r 1_muation_frequency3}
 ID_all_highest_30_frequencies = order(all_mutated_genes_df_highest_30["Freq"], decreasing = TRUE)
 all_mutated_genes_df_highest_30_ordered = all_mutated_genes_df_highest_30[ID_all_highest_30_frequencies, ]
 rownames(all_mutated_genes_df_highest_30_ordered) = 1:30
@@ -313,14 +313,14 @@ colnames(all_mutated_genes_df_highest_30_ordered) = colnames_ordered
 
 Melt only HNC sample mutation matrices together and find out most frequent mutations
 
-```{r}
+```{r 1_muation_frequency4}
 HNC_mutations = do.call(rbind, mutation.HNC)
 HNC_mutated_genes = table(HNC_mutations$Hugo_Symbol)
 HNC_mutated_genes_df = as.data.frame(HNC_mutated_genes)
 ```
 
 Order the found mutations by frequencies and name the data frame
-```{r}
+```{r 1_muation_frequency5}
 ID_HNC_highest_frequencies = head(order(HNC_mutated_genes_df[["Freq"]], decreasing = TRUE), length(ID))
 HNC_mutated_genes_df_highest_ordered = HNC_mutated_genes_df[ID_HNC_highest_frequencies, ]
 rownames(HNC_mutated_genes_df_highest_ordered) = 1:length(ID)
@@ -330,7 +330,7 @@ colnames(HNC_mutated_genes_df_highest_ordered) = colnames_ordered
 ### Plotting mutation frequencies of all samples and of HNC samples
 
 Plot mutations in all samples
-```{r  1_muation_frequency3, fig.height = 7}
+```{r  1_muation_frequency6, fig.height = 7}
 ggplot(data = all_mutated_genes_df_highest_30_ordered, aes(x=Gene, y=Freq)) +
   geom_bar(stat = "identity", width = 0.5, fill="steelblue") +
   geom_text(aes(label=Freq), vjust=-0.3, size=2.5) +
@@ -338,7 +338,7 @@ ggplot(data = all_mutated_genes_df_highest_30_ordered, aes(x=Gene, y=Freq)) +
 ```
 
 Plot mutations in HNC samples
-```{r  1_muation_frequency4, fig.height = 7}
+```{r  1_muation_frequency7, fig.height = 7}
 ggplot(data = HNC_mutated_genes_df_highest_ordered, aes(x=Gene, y=Freq)) +
   geom_bar(stat = "identity", width = 0.5, fill="steelblue") +
   geom_text(aes(label=Freq), vjust=-0.3, size=3.5) +
