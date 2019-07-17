@@ -473,10 +473,10 @@ summary(esgeneT$EGFR)
 \newpage
 ### Boxplot of 20 random genes
 ```{r 1_knockdown_boxplot}
-# Boxplot of 20 of most significiant genes according to knockdown analysis
+# Boxplot of 20 random genes according to knockdown analysis
 boxplot(sample(esgeneT,20, replace = FALSE),
-        xlab = "gene",
-        horizontal =T,
+        horizontal =F,
+        las = 2, #flip gene names
         main="Knockdown values of 20 random genes",
         xlab="genes",
         ylab="Knockdown values",
