@@ -32,14 +32,14 @@ root.dir = dirname(rstudioapi::getSourceEditorContext()$path)
 
 # Predicting Cancer-Specific Vulnerability via DAISY System
 
-```{r, echo=FALSE, fig.cap="Daisy-Workflow", out.width='100%'}
+```{r, echo=FALSE, fig.cap="Daisy-Workflow", out.width='110%'}
 knitr::include_graphics("images/Daisy.png")
 ```
 
 \newpage
 # Milestones
 
-```{r, echo=FALSE, fig.cap="Milestones of our project", out.width='100%'}
+```{r, echo=FALSE, fig.cap="Milestones of our project", out.width='110%'}
 knitr::include_graphics("images/milestones.png")
 ```
 
@@ -208,7 +208,7 @@ goi.SDL = as.character(goi.sdl$genes[1:5])
 rm(emp, i, km.genes, y_kmeans, kmeans, km.copynumber, km.data, km.expression, comb.ex.cna) 
 ```
 
-\newpage
+
 ## Investigate high frequencies of deleterious mutations SL GOI
 
 Create a dataframe with data for the heatmap.
@@ -421,7 +421,6 @@ Gene coexpression
 SDL.coexpression = Daisy.Spearman(goi.SDL)
 ```
 
-\newpage
 ## Converging the different SL and SDL sets
 
 Define function to converge SL/SDL sets.

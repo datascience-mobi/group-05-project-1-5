@@ -126,8 +126,6 @@ Result: Gene espression is neither in HNC samples nor in reference samples norma
 
 <br/><br/>
 
-<br/><br/>
-
 Then we compare HNC and reference group gene expression using a statistical test. A Wilcoxon rank sum test must be applied because the expression is not normally distributed.
 ```{r 1_expression_values4}
 wilcox.test(mean.exp.HNC, mean.exp.reference)
@@ -204,6 +202,7 @@ barplot.data$Group = ifelse(barplot.data$Values>0,"overexpressed","underexpresse
 barplot.data = barplot.data[order(barplot.data$Values),]
 barplot.data = barplot.data[c(1:19, (nrow(barplot.data)-20):nrow(barplot.data)),]
 ```
+\newpage
 and plot this dataframe.
 ```{r 1_expression_plot4}
 ggplot(barplot.data,aes(x=Genes,y=Values,fill=Group)) +
@@ -376,7 +375,7 @@ ggplot(data = HNC_mut_genes_df_highest_ordered, aes(x=Gene, y=Freq)) +
 ```
 
 
-
+\newpage
 ### Clean mutation from unnecessary data
 
 Due to the needed conditions in the following "Daisy-tests" we now clean the mutation data and extract all "isDeleterious" mutations, since they are essential for the survival or death of a cell. In this way, we later are able to find our genes of interest for the SL more easily.
@@ -471,6 +470,7 @@ esgeneT = as.data.frame(t(esgene1))
 summary(esgeneT$EGFR)
 ```
 
+\newpage
 ### Boxplot of 20 random genes
 ```{r 1_knockdown_boxplot}
 # Boxplot of 20 of most significiant genes according to knockdown analysis
@@ -488,7 +488,7 @@ abline(col = c("blue", "red", "black", "orange"),
         lty = 2)
 ```
 
-
+\newpage
 ### Applying Wilcoxon rank sum test because knockdown values are not normally distributed
 To check if the HNC knockdown values differ from the compare group, a wilcoxon test is executed.
 ```{r 1_knockdown_Wilcox}
@@ -600,7 +600,6 @@ goi.SDL = as.character(goi.sdl$genes[1:5])
 rm(emp, i, km.genes, y_kmeans, kmeans, km.copynumber, km.data, km.expression, comb.ex.cna) 
 ```
 
-\newpage
 ## Investigate high frequencies of deleterious mutations SL GOI
 
 Create a dataframe with data for the heatmap.
@@ -813,7 +812,6 @@ Gene coexpression
 SDL.coexpression = Daisy.Spearman(goi.SDL)
 ```
 
-\newpage
 ## Converging the different SL and SDL sets
 
 Define function to converge SL/SDL sets.
@@ -910,12 +908,13 @@ Creation of a function for transforming given data into a format iGraph can work
 
 ```
 
-
+\newpage
 Creating a networkplot for the SL-partner
 ```{r 3_SL_network, fig.height = 7, fig.width = 10}
 network(SL.partner,2,"grey","black",3,"Network of SL interaction", NA, goi.SL )
 ```
 
+\newpage
 Creating a network for the SDL-partner
 ```{r 3_SDL_network, fig.height = 7, fig.width = 10}
 network(SDL.partner,2,"grey","black",3,"Network of SDL interaction", NA, goi.SDL )
@@ -980,6 +979,7 @@ kable(data.frame("SL genes" = names(SL.partner),
 
 Now the number of SL/SDL partner is much better to plot.
 
+\newpage
 ## Plotting SL/SDL partner network with reduced number of partner
 
 SL interaction plot with reduced partners
@@ -989,6 +989,7 @@ network(SL.partner.reduced,4,"grey","grey",12,"Network of SL interaction (reduce
         goi.SL)
 ```
 
+\newpage
 SDL interaction plot with reduced partners
 ```{r 3_SDL_network_reduced, fig.height = 12, fig.width = 15}
 network(SDL.partner.reduced,4,"grey","grey",12,"Network of SDL interaction (reduced)",
