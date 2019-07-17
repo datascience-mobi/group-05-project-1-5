@@ -43,14 +43,14 @@ knitr::include_graphics("images/HNC_Kopf.png")
 ```
 
 In the century of next generation sequencing, the genome became an interesting target for scientists. Approaches that directly affect important oncogenes often fail due to the fact that these genes play an important role in healthy cells. The researchers in our paper (Jerby-Arnon, L., et al. (2014). "Predicting Cancer-Specific Vulnerability via Data-Driven Detection of Synthetic Lethality." Cell 158(5): 1199-1209.) investigated synthetic lethality and synthetic dosage lethality that uses gene interactions to affect tumorous proliferation. Synthetic letahlity describes a gene interaction in which single-gene defects are compatible with cell viability, but the combination of gene effects results in cell death. Synthetic dosage lethality occurs, when the overexpression of one gene is combined with the knockout of another gene.
-
+\newpage
 ```{r, echo=FALSE, fig.cap="Daisy-Workflow", out.width='100%'}
 knitr::include_graphics("images/Daisy.png")
 ```
 
 Daisy consists of three statistical approaches (Figure 2), each processing different sub data from a cancer Dataset. The first strategy is “Survival of the fittest”, where just deleted SL-paired genes were selected, that are not in a surviving cancer culture. The second strategy is “functional examination” where SL genes were identified, by knocking out genes, with the additive, that the SL partners are inactive. If the tumor shows decreased proliferation, it accounts for the SL pair group. The third strategy is “pairwise gene co- expression” that is based on the fact that SL pairs are often closely related in biological pathways and therefore exhibit similar occurrence. If a gene pair fulfills every of the three criteria, it might be a potential SL pair according to DAISY. To check for SDL partners the criteria of inactive or active is replaced by under- or overactive, measured through expression numbers and copy number alterations.
 
-
+\newpage
 ## Milestones
 ```{r, echo=FALSE, fig.cap="Milestones of our project", out.width='100%'}
 knitr::include_graphics("images/milestones.png")
@@ -58,7 +58,7 @@ knitr::include_graphics("images/milestones.png")
 
 The strategy of our project consisted of 4 main milestones (Figure 3). At first we familiarized with the data and did the first descriptive statistics in milestone 1. Secondly, we identified potential genes “of interest” (SL and SDL candidates), according to DAISY-System. In our third milestone, the core task of our project was implemented. The identification of SL and SDL pairs was executed using functional examination, survival of the fittest and pairwise co-expression. Lastly, in our fourth milestone we tested logistic regression to predict mutations.
 
-
+\newpage
 # 1. Data Cleanup & Descriptive Statistics
 
 ## Loading data and defining HNC variables
@@ -87,6 +87,7 @@ kd.prob.HNC = kd.prob[ , which(colnames(kd.prob) %in% ID)]
 mutation.HNC = mutation[ID]
 ```
 
+\newpage
 ## Expression analysis
 
 
@@ -123,12 +124,17 @@ ggqqplot(mean.expression, x = "expression_values",
 
 Result: Gene espression is neither in HNC samples nor in reference samples normally distributed.
 
+<br/><br/>
+
+<br/><br/>
+
 Then we compare HNC and reference group gene expression using a statistical test. A Wilcoxon rank sum test must be applied because the expression is not normally distributed.
 ```{r 1_expression_values4}
 wilcox.test(mean.exp.HNC, mean.exp.reference)
 ```
 Result: Mean gene expression differs between HNC and reference group samples significantly.
 
+<br/><br/>
 
 Next we check if the gene expression differs whether a gene has a deleterious mutation or not. AS an example, we compare the mean TP53 gene expression of all samples with and without deleterious TP53 mutation.
 ```{r 1_expression_values5}
@@ -158,6 +164,8 @@ wilcox.test(exp.TP53.mut , exp.TP53.not_mut)
 ```
 Result: Gene expression of TP53 as an example gene varies significantly whether the samples has or has no deleterious TP53 mutation.
 
+<br/><br/>
+
 At last, we plot a histogram to check how the expression values are distributed.
 ```{r 1_expression_values7}
 gghistogram(as.data.frame(mean.exp.HNC),
@@ -173,7 +181,7 @@ gghistogram(as.data.frame(mean.exp.HNC),
 
 Result: The most genes have expression values around 0.
 
-
+<br/><br/>
 
 ### Plot the 20 most under- and overexpressed genes of HNC samples.
 For this we need to normalize the expression data from HNC samples
@@ -212,7 +220,9 @@ rm(HNC, Reference, mean.expression, TP53.mut.ID, TP53.not_mut.ID, exp.TP53.mut,
    mean.exp.reference, expression.reference)
 ```
 
+\newpage
 ## Copynumber Alteration
+
 ### Analysis of NA values
 
 Examination of NA values in the copynumber.HNC data
@@ -295,6 +305,7 @@ rm(NA.rows, NA.rows.ref, copynumber.HNC.norm, copynumber.HNC.mean,
    copynumber.ref.mean, copynumber.reference, Values)
 ```
 
+\newpage
 ## Mutation
 
 ### Find Mutations with the highest frequencies
@@ -302,49 +313,54 @@ rm(NA.rows, NA.rows.ref, copynumber.HNC.norm, copynumber.HNC.mean,
 Melt all mutation matrices together as data frame and find out most frequent mutations
 ```{r 1_muation_frequency1}
 all_mutations = do.call(rbind,mutation)
-all_mutated_genes = table(all_mutations$Hugo_Symbol)
-all_mutated_genes_df = as.data.frame(all_mutated_genes)
+all_mut_genes = table(all_mutations$Hugo_Symbol)
+all_mut_genes_df = as.data.frame(all_mut_genes)
 ```
 
 Order the found mutations by frequencies and extract 30 most frequent
 ```{r 1_muation_frequency2}
-ID_all_highest_frequencies = head(order(all_mutated_genes_df[["Freq"]], decreasing = TRUE), 30)
-all_mutated_genes_df_highest_30 = all_mutated_genes_df[which(rownames(all_mutated_genes_df) %in% ID_all_highest_frequencies), ]
-ID_all_highest_30_frequencies = order(all_mutated_genes_df_highest_30["Freq"], decreasing = TRUE) 
-all_mutated_genes_highest_30_ordered = all_mutated_genes_df_highest_30[ID_all_highest_30_frequencies, ]
-head(all_mutated_genes_highest_30_ordered)
+ID_all_highest_frequencies = head(order(all_mut_genes_df[["Freq"]], decreasing = TRUE), 30)
+all_mut_genes_df_highest_30 = all_mut_genes_df[
+  which(rownames(all_mut_genes_df) %in% ID_all_highest_frequencies), ]
+ID_all_highest_30_frequencies = order(all_mut_genes_df_highest_30["Freq"],
+                                      decreasing = TRUE) 
+all_mut_genes_highest_30_ordered = all_mut_genes_df_highest_30[ID_all_highest_30_frequencies, ]
+head(all_mut_genes_highest_30_ordered)
 ```
 
 Name the newly established data frame for the look
 ```{r 1_muation_frequency3}
-ID_all_highest_30_frequencies = order(all_mutated_genes_df_highest_30["Freq"], decreasing = TRUE)
-all_mutated_genes_df_highest_30_ordered = all_mutated_genes_df_highest_30[ID_all_highest_30_frequencies, ]
-rownames(all_mutated_genes_df_highest_30_ordered) = 1:30
+ID_all_highest_30_frequencies = order(all_mut_genes_df_highest_30["Freq"],
+                                      decreasing = TRUE)
+all_mut_genes_df_highest_30_ordered = all_mut_genes_df_highest_30[ID_all_highest_30_frequencies,]
+rownames(all_mut_genes_df_highest_30_ordered) = 1:30
 colnames_ordered = c("Gene", "Freq")
-colnames(all_mutated_genes_df_highest_30_ordered) = colnames_ordered
+colnames(all_mut_genes_df_highest_30_ordered) = colnames_ordered
 ```
 
 Melt only HNC sample mutation matrices together and find out most frequent mutations
 
 ```{r 1_muation_frequency4}
 HNC_mutations = do.call(rbind, mutation.HNC)
-HNC_mutated_genes = table(HNC_mutations$Hugo_Symbol)
-HNC_mutated_genes_df = as.data.frame(HNC_mutated_genes)
+HNC_mut_genes = table(HNC_mutations$Hugo_Symbol)
+HNC_mut_genes_df = as.data.frame(HNC_mut_genes)
 ```
 
 Order the found mutations by frequencies and name the data frame
 ```{r 1_muation_frequency5}
-ID_HNC_highest_frequencies = head(order(HNC_mutated_genes_df[["Freq"]], decreasing = TRUE), length(ID))
-HNC_mutated_genes_df_highest_ordered = HNC_mutated_genes_df[ID_HNC_highest_frequencies, ]
-rownames(HNC_mutated_genes_df_highest_ordered) = 1:length(ID)
-colnames(HNC_mutated_genes_df_highest_ordered) = colnames_ordered
+ID_HNC_highest_frequencies = head(order(HNC_mut_genes_df[["Freq"]],
+                                        decreasing = TRUE),
+                                        length(ID))
+HNC_mut_genes_df_highest_ordered = HNC_mut_genes_df[ID_HNC_highest_frequencies, ]
+rownames(HNC_mut_genes_df_highest_ordered) = 1:length(ID)
+colnames(HNC_mut_genes_df_highest_ordered) = colnames_ordered
 ```
 
 ### Plotting mutation frequencies of all samples and of HNC samples
 
 Plot mutations in all samples
 ```{r  1_muation_frequency6, fig.height = 7}
-ggplot(data = all_mutated_genes_df_highest_30_ordered, aes(x=Gene, y=Freq)) +
+ggplot(data = all_mut_genes_df_highest_30_ordered, aes(x=Gene, y=Freq)) +
   geom_bar(stat = "identity", width = 0.5, fill="steelblue") +
   geom_text(aes(label=Freq), vjust=-0.3, size=2.5) +
   theme_grey() + coord_flip()
@@ -352,7 +368,7 @@ ggplot(data = all_mutated_genes_df_highest_30_ordered, aes(x=Gene, y=Freq)) +
 
 Plot mutations in HNC samples
 ```{r  1_muation_frequency7, fig.height = 7}
-ggplot(data = HNC_mutated_genes_df_highest_ordered, aes(x=Gene, y=Freq)) +
+ggplot(data = HNC_mut_genes_df_highest_ordered, aes(x=Gene, y=Freq)) +
   geom_bar(stat = "identity", width = 0.5, fill="steelblue") +
   geom_text(aes(label=Freq), vjust=-0.3, size=3.5) +
   theme_grey() +
@@ -387,13 +403,14 @@ head(mutation.HNC[[1]])
 
 ### Cleanup of the enviroment
 ```{r 1_muation_cleanup}
-rm(all_mutations, all_mutated_genes, all_mutated_genes_df, ID_all_highest_30_frequencies,
-   ID_all_highest_frequencies, all_mutated_genes_df_highest_30,
-   all_mutated_genes_df_highest_30_ordered, colnames_ordered, HNC_mutations,
-   HNC_mutated_genes, HNC_mutated_genes_df, ID_HNC_highest_frequencies,
-   HNC_mutated_genes_df_highest_ordered)
+rm(all_mutations, all_mut_genes, all_mut_genes_df, ID_all_highest_30_frequencies,
+   ID_all_highest_frequencies, all_mut_genes_df_highest_30,
+   all_mut_genes_df_highest_30_ordered, colnames_ordered, HNC_mutations,
+   HNC_mut_genes, HNC_mut_genes_df, ID_HNC_highest_frequencies,
+   HNC_mut_genes_df_highest_ordered)
 ```
 
+\newpage
 ## Knockdown
 
 ### Overview of kd.ceres values in HNC patients
@@ -427,6 +444,8 @@ ggqqplot(mean.kd.ceres.dist, x = "kd_values",
 ```
 
 Result: kd.ceres values are not normal distributed
+
+<br/><br/>
 
 Checking the distribution for knockdown values
 ```{r 1_knockdown_values2}
@@ -486,10 +505,10 @@ rm(kd.ceres.HNC.dist, kd.ceres.reference, kd.ceres.reference.dist, mean.kd.ceres
    mean.kd.ceres.reference, mean.kd.ceres.dist, esgene1, esgeneT)
 ```
 
-
+\newpage
 # 2. Identify genes of interest
 
-## k-means clustering of CNA and expression data with normalized values(-reference) for SDL GOI
+## k-means clustering of CNA and expression data with normalized values (-reference) for SDL GOI
 To find potential genes for SDL pair detection, clustering through k-means was executed. 
 ```{r 2_kmeans}
 # Intersect set of expression and CNA
@@ -507,7 +526,7 @@ km.data = lapply(1:length(ID), function(x) {
 # Combine rows for k mean clustering
 comb.ex.cna = do.call(rbind, km.data)
 comb.ex.cna = comb.ex.cna[which(comb.ex.cna$copynumber >= 1 &
-                                  comb.ex.cna$expression >=quantile(comb.ex.cna$expression,0.95)),]
+                                  comb.ex.cna$expression >= quantile(comb.ex.cna$expression,0.95)),]
 
 # Plotting of normalized expression valuess against CNA data for a short overview. 
 ggplot(comb.ex.cna[, 2:3],
@@ -535,6 +554,8 @@ plot(1:10,
 
 Result: The ellbow test shows that 3 clusters are sufficient.
 
+<br/><br/>
+
 K-means were executed and plotted. Afterwards the potential SDL candidates were identified through higher expression values.
 ```{r 2_kmeansclustering}
 # Fitting k-means to the dataset - elbow method (k = 3) 
@@ -559,6 +580,8 @@ clusplot(comb.ex.cna,
 
 The Plot "Cluster of genes" features the 3 clusters of values from expression and CNA data. Due to little variance between the data pairs, the intersection set is comparatively big. 
 
+<br/><br/>
+
 In order to define SDL candidates, the cluster with highest expression values was chosen and filtered again according to expression numbers. 
 ```{r 2_goiSDL}
 comb.ex.cna = cbind(comb.ex.cna, y_kmeans)# Combine kmeans with genes
@@ -577,6 +600,7 @@ goi.SDL = as.character(goi.sdl$genes[1:5])
 rm(emp, i, km.genes, y_kmeans, kmeans, km.copynumber, km.data, km.expression, comb.ex.cna) 
 ```
 
+\newpage
 ## Investigate high frequencies of deleterious mutations SL GOI
 
 Create a dataframe with data for the heatmap.
@@ -611,8 +635,9 @@ heatmap(data.matrix(heatmap.data)[1:40,],
         main = "Most frequently deleterious mutated genes in HNC samples")
 ```
 
-Result: TP53, FAT1, CDKN2A, KRT3 and CASP8 are the 5 most frequently deleterious mutated genes in our HNC samples
+Result: TP53, FAT1, CDKN2A, KRT3 and CASP8 are the 5 most frequently deleterious mutated genes in our HNC samples.
 
+\newpage
 According to Leemans et al. (2018) these are frequent mutations in HNC:
 ```{r, echo=FALSE, fig.cap="Genes with frequent and highly significant somatic genetic changes in HNSCC", out.width='100%'}
 knitr::include_graphics("images/frequent_mutations_HNC.png")
@@ -653,6 +678,7 @@ Clean up of the enviroment
 rm(mutation.HNC.df, heatmap.genes, heatmap.data, heatmap_position)
 ```
 
+\newpage
 # 3. Find SL/SDL partner
 
 ## SL/SDL partner search following the daisy model
@@ -745,14 +771,18 @@ Both functions return a list, which contains the five genes of interest, each co
 SoF
 ```{r 3_SL_SoF}
 # SoF, inactive, one sided Wilcoxon rank test, alternative = "greater"
-SL.SoF = Daisy.Wilcox(goi.SL, copynumber, inactive_overactive = 0, less_greater = 1)
+SL.SoF = Daisy.Wilcox(goi.SL, copynumber,
+                      inactive_overactive = 0,
+                      less_greater = 1)
 # Example of SL SoF for first GOI (TP53)
 head(SL.SoF[[1]])
 ```
 Functional examination
 ```{r 3_SL_functional_examination}
 # Functional examination, inactive, one sided Wilcoxon rank test, alternative = "less"
-SL.functional.examination = Daisy.Wilcox(goi.SL, kd.ceres, inactive_overactive = 0, less_greater = 0)
+SL.functional.examination = Daisy.Wilcox(goi.SL, kd.ceres,
+                                         inactive_overactive = 0,
+                                         less_greater = 0)
 # Example of SL functional examination for first GOI (TP53)
 head(SL.functional.examination[[1]])
 ```
@@ -767,18 +797,23 @@ head(SL.coexpression[[1]])
 SoF
 ```{r 3_SDL_SoF}
 # SoF, overactive, one sided Wilcoxon rank test, alternative = "greater"
-SDL.SoF = Daisy.Wilcox(goi.SDL, copynumber, inactive_overactive = 1, less_greater = 1)
+SDL.SoF = Daisy.Wilcox(goi.SDL, copynumber,
+                       inactive_overactive = 1,
+                       less_greater = 1)
 ```
 Functional examination
 ```{r 3_SDL_functional_examination}
 # Functional examination, overactive, one sided Wilcoxon rank test, alternative = "less"
-SDL.functional.examination = Daisy.Wilcox(goi.SDL, kd.ceres, inactive_overactive = 1, less_greater = 0)
+SDL.functional.examination = Daisy.Wilcox(goi.SDL, kd.ceres,
+                                          inactive_overactive = 1,
+                                          less_greater = 0)
 ```
 Gene coexpression
 ```{r 3_SDL_coexpression}
 SDL.coexpression = Daisy.Spearman(goi.SDL)
 ```
 
+\newpage
 ## Converging the different SL and SDL sets
 
 Define function to converge SL/SDL sets.
@@ -822,9 +857,10 @@ kable(data.frame("SL genes" = names(SL.partner),
            ))
 ```
 
+\newpage
 ## Plotting networks of the Interactions 
 
-Creation of a function for transforming given data into a format iGraph can work with and plotting of the network
+Creation of a function for transforming given data into a format iGraph can work with and plotting of the network.
 ```{r 3_network}
 'network' = function(X.partner,width,node.color,frame.color,node.size,Titel,label,GOI){
   # Input: SL/SDL.partner, number, string, string, number, string, NA or names(plot)
@@ -886,6 +922,7 @@ network(SDL.partner,2,"grey","black",3,"Network of SDL interaction", NA, goi.SDL
 ```
 
 Because there are to many SL/SDL partner to plot a network we reduce SL/SDL partner to the most significants.
+
 To do so, we reduce the number of partner genes for better plotting without removing genes which are connected to more than one GOI.
 ```{r 3_reduce_partner}
 'reduce.partner' = function(list){
@@ -943,8 +980,7 @@ kable(data.frame("SL genes" = names(SL.partner),
 
 Now the number of SL/SDL partner is much better to plot.
 
-
-Plotting SL/SDL partner network with reduced number of partner
+## Plotting SL/SDL partner network with reduced number of partner
 
 SL interaction plot with reduced partners
 ```{r 3_SL_network_reduced, fig.height = 12, fig.width = 15.3}
@@ -962,6 +998,7 @@ network(SDL.partner.reduced,4,"grey","grey",12,"Network of SDL interaction (redu
 
 In Conclusion, the search for potential SL and SDL partner genes led us to our two main networks depicted above. Most of the found SL/SDL partners play crucial roles in key steps of cell development, for example like fostering transcription and translation or directly influencing the cell organization. This explains why the tested tumor cells died after a knockdown/knockout of those genes and why they became essential for the cells.
 
+\newpage
 # 4. Mutation prediction via logistical regression
 
 ## Prepare data for regression model
@@ -1016,6 +1053,7 @@ test.set = test.set[,2:ncol(test.set)]
 head(test.set)
 ```
 
+\newpage
 ## Train the model
 ```{r 4_train}
 lrfit = glm(mutation ~ ., data=train.set,family="binomial") 
@@ -1034,7 +1072,9 @@ hist(pred) # Look at the predictions
 Devide prediction in tressholds
 ```{r 4_treshhold}
 threshhold_ls = seq(min(pred), max(pred), by=0.001) # Make a thresshold list
-threshold_list = lapply(seq_along(threshhold_ls), function(a) table(pred>threshhold_ls[a], test.set$mutation))
+threshold_list = lapply(seq_along(threshhold_ls), function(a){
+  table(pred>threshhold_ls[a], test.set$mutation)
+  })
 ```
 
 Calculate the precision values
@@ -1087,14 +1127,21 @@ rm(precision, pred, recall, regression.genes, threshhold_ls, inTrain, lrfit, res
    test.set, threshold_list, train.set)
 ```
 
+\newpage
 # References 
 
 ## Articles
+
 1.) Jerby-Arnon, L., et al. (2014). "Predicting Cancer-Specific Vulnerability via Data-Driven Detection of Synthetic Lethality." Cell 158(5): 1199-1209.
+
 2.) Ashworth, A., et al. (2011). "Genetic Interactions in Cancer Progression and Treatment." Cell 145(1): 30-38.
+
 3.) O'Neil, N. J., et al. (2017). "Synthetic lethality and cancer." Nature Reviews Genetics 18: 613.
 	
 ## Figures
+
 Figure 1 - https://crukcambridgecentre.org.uk/patient-care/clinical-research/head-and-neck
+
 Figure 2 - Jerby-Arnon, L., et al. (2014). "Predicting Cancer-Specific Vulnerability via Data-Driven Detection of Synthetic Lethality." Cell 158(5): 1199-1209.
+
 Figure 4 - Leemans, C. R. et al. (2018). The molecular landscape of head and neck cancer. Nat. Rev. Cancer 18, 269-282.
