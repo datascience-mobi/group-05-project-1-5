@@ -1,8 +1,8 @@
 ---
 title: "Presentation Project Head and Neck Cancer"
 author: "Nils Mechtel, Tobias Hub, Niklas Urbanek, Pascal Poc"
-date: "24 July 2019"
-output: html_document 
+date: "24. July 2019"
+output: pdf_document 
 fig_caption: yes
 ---
 
@@ -12,7 +12,8 @@ knitr::opts_chunk$set(echo = TRUE,
                       cache = TRUE,
                       comment = NA,
                       message = FALSE,
-                      warning = FALSE)
+                      warning = FALSE,
+                      fig.pos = 'h')
 
 # Library packages
 library(knitr)      # RMarkdown
@@ -31,12 +32,16 @@ root.dir = dirname(rstudioapi::getSourceEditorContext()$path)
 
 # Predicting Cancer-Specific Vulnerability via DAISY System
 
-![Figure 1 | Daisy-Workflow](images/Daisy.png)
+```{r, echo=FALSE, fig.cap="Daisy-Workflow", out.width='110%'}
+knitr::include_graphics("images/Daisy.png")
+```
 
-
+\newpage
 # Milestones
 
-![Figure 2 | Milestones of our project](images/milestones.png)
+```{r, echo=FALSE, fig.cap="Milestones of our project", out.width='110%'}
+knitr::include_graphics("images/milestones.png")
+```
 
 
 ```{r load_data, include = FALSE}
@@ -108,24 +113,28 @@ mutation.HNC = mutation.clean(mutation.HNC)
 ```
 
 
-
+\newpage
 # Identify genes of interest
 
-## k-means clustering of CNA and expression data with normalized values(-reference) for SDL GOI
+## k-means clustering of CNA and expression data with normalized values (-reference) for SDL GOI
 To find potential genes for SDL pair detection, clustering through k-means was executed. 
-```{r 2_kmeans1}
-km.genes = Reduce(intersect, list(rownames(expression.HNC), rownames(copynumber.HNC))) # Intersect set of expression and CNA
+```{r 2_kmeans}
+# Intersect set of expression and CNA
+km.genes = Reduce(intersect, list(rownames(expression.HNC), rownames(copynumber.HNC))) 
 
 # Create data rame with expression and CNA values
 km.expression = expr.HNC.norm[km.genes,]
 km.copynumber = cna.HNC.norm[km.genes,]
 km.data = lapply(1:length(ID), function(x) {
-  out = data.frame(genes =km.genes, expression = km.expression[,x], copynumber = km.copynumber[,x])
+  out = data.frame(genes =km.genes,
+                   expression = km.expression[,x],
+                   copynumber = km.copynumber[,x])
   return (out)
 })
 # Combine rows for k mean clustering
 comb.ex.cna = do.call(rbind, km.data)
-comb.ex.cna = comb.ex.cna[which(comb.ex.cna$copynumber >= 1 & comb.ex.cna$expression >=quantile(comb.ex.cna$expression,0.95)),]
+comb.ex.cna = comb.ex.cna[which(comb.ex.cna$copynumber >= 1 &
+                                  comb.ex.cna$expression >= quantile(comb.ex.cna$expression,0.95)),]
 
 # Plotting of normalized expression valuess against CNA data for a short overview. 
 ggplot(comb.ex.cna[, 2:3],
@@ -137,7 +146,8 @@ To check the perfect ammount of clusters in k-means, an ellbow test was implemen
 ```{r 2_ellbow method}
 # Ellbow method to find optimal ammount of clusters
 emp = vector() # Create an empty vector
-for (i in 1:10) emp[i] = sum(kmeans(comb.ex.cna[2:3], i)$withinss) # Calculate the sum within squared values for 10 clusters
+# Calculate the sum within squared values for 10 clusters
+for (i in 1:10) emp[i] = sum(kmeans(comb.ex.cna[2:3], i)$withinss)
 emp # Look at the sum within squares for 10 clusters
 
 # Plotting of Ellbow method
@@ -152,11 +162,12 @@ plot(1:10,
 
 Result: The ellbow test shows that 3 clusters are sufficient.
 
+<br/><br/>
 
 K-means were executed and plotted. Afterwards the potential SDL candidates were identified through higher expression values.
 ```{r 2_kmeansclustering}
-# Fitting K-Means to the dataset
-kmeans = kmeans(x = comb.ex.cna[,2:3], centers = 3,iter.max = 1000, nstart = 1) # See elbow method (k = 3) 
+# Fitting k-means to the dataset - elbow method (k = 3) 
+kmeans = kmeans(x = comb.ex.cna[,2:3], centers = 3,iter.max = 1000, nstart = 1) 
 y_kmeans = kmeans$cluster 
 
 # Visualising the clusters
@@ -177,6 +188,7 @@ clusplot(comb.ex.cna,
 
 The Plot "Cluster of genes" features the 3 clusters of values from expression and CNA data. Due to little variance between the data pairs, the intersection set is comparatively big. 
 
+<br/><br/>
 
 In order to define SDL candidates, the cluster with highest expression values was chosen and filtered again according to expression numbers. 
 ```{r 2_goiSDL}
@@ -192,18 +204,22 @@ goi.sdl = goi.sdl[order(goi.sdl$expression,decreasing=TRUE),]
 kable(goi.sdl[1:5,])
 
 goi.SDL = as.character(goi.sdl$genes[1:5])
+# Clean enviroment
+rm(emp, i, km.genes, y_kmeans, kmeans, km.copynumber, km.data, km.expression, comb.ex.cna) 
 ```
-
 
 ## Investigate high frequencies of deleterious mutations SL GOI
 
 Create a dataframe with data for the heatmap.
-```{r 2_SLgoi1, fig.width=8, fig.height=9}
-mutation.HNC.df = do.call(rbind, mutation.HNC) # All mutation data of HNC samples in one dataframe
-heatmap.genes = as.data.frame(table(mutation.HNC.df$Hugo_Symbol)) # Dataframe with all mutated genes in HNC samples just once
+```{r 2_SLgoi1, fig.width=8, fig.height=10}
+# All mutation data of HNC samples in one dataframe
+mutation.HNC.df = do.call(rbind, mutation.HNC)
+# Dataframe with all mutated genes in HNC samples just once
+heatmap.genes = as.data.frame(table(mutation.HNC.df$Hugo_Symbol))
 
 heatmap.data = as.data.frame(sapply(1:(length(ID)), function(a) {
-  out = ifelse(heatmap.genes$Var1 %in% mutation.HNC[[a]]$Hugo_Symbol, 1, 0) # Per HNC sample: every gene which is mutated gets a 1, otherwise a 0
+  # Per HNC sample: every gene which is mutated gets a 1, otherwise a 0
+  out = ifelse(heatmap.genes$Var1 %in% mutation.HNC[[a]]$Hugo_Symbol, 1, 0) 
   return(out)
 }))
 
@@ -228,25 +244,26 @@ heatmap(data.matrix(heatmap.data)[1:40,],
 
 Result: TP53, FAT1, CDKN2A, KRT3 and CASP8 are the 5 most frequently deleterious mutated genes in our HNC samples.
 
-
+\newpage
 According to Leemans et al. (2018) these are frequent mutations in HNC:
-![](images/frequent_mutations_HNC.png)
-
-
-
-Leemans, C. R. et al. (2018). The molecular landscape of head and neck cancer. Nat. Rev. Cancer 18, 269-282.
+```{r, echo=FALSE, fig.cap="Genes with frequent and highly significant somatic genetic changes in HNSCC", out.width='100%'}
+knitr::include_graphics("images/frequent_mutations_HNC.png")
+```
 
 
 Compare our SL GOI with genes from literature.
 ```{r 2_SLgoi2}
 # create dataframe with goi from literature
-goi.lit = data.frame(Gene = c("CDKN2A", "TP53", "CCND1", "EGFR", "PIK3CA", "PTEN", "FAT1", "AJUBA", "NOTCH1", "KMT2D", "NSD1"),
+goi.lit = data.frame(Gene = c("CDKN2A", "TP53", "CCND1", "EGFR", "PIK3CA", "PTEN", "FAT1",
+                              "AJUBA", "NOTCH1", "KMT2D", "NSD1"),
                      "Mutation frequency" = c(22, 72, 0.6, 4, 18, 3, 23, 7, 18, 16, 12),
                      "CNA frequency" = c(32, 1.4, 25, 11, 21, 4, 8, 1, 4, 0.4, 0.8)) 
 
-heatmap_position = sapply(1:nrow(goi.lit), function(a) { # Search for the position of goi.lit in mutated genes of HNC samples
+# Search for the position of goi.lit in mutated genes of HNC samples
+heatmap_position = sapply(1:nrow(goi.lit), function(a) {
   position = which(rownames(heatmap.data) == goi.lit$Gene[a])
-  if(length(position) == 0) {position = NA} # If gene is not part of the genes mutated in HNC samples its position is replaced with NA
+  # If gene is not mutated in HNC samples its position is replaced with NA
+  if(length(position) == 0) {position = NA} 
   return(position)
 })
 
@@ -263,6 +280,12 @@ goi.SL = rownames(heatmap.data)[1:5]
 goi.SL
 ```
 
+Clean up of the enviroment
+```{r 2_SLgoi_cleanup}
+rm(mutation.HNC.df, heatmap.genes, heatmap.data, heatmap_position)
+```
+
+\newpage
 # Find SL/SDL partner
 
 ## SL/SDL partner search following the daisy model
@@ -272,31 +295,39 @@ To examine gene pairs A and B which fulfill the criteria of SoF and functional e
 'Daisy.Wilcox' = function(input_genes,input_data, inactive_overactive, less_greater){
   Daisy_Wilcox = lapply(1:length(input_genes), function(m) {
   goi = input_genes[m] # Set 1 of 5 goi
-  # Depending on SL or SDL partner search gene B needs to be inactive (SL) or overactive (SDL)
+  # Depending on SL or SDL partner search
+  # (1) gene B is overactive (SDL)
   if(inactive_overactive == 1) { # inactive_overactive == 1 chooses overactive
     mean.exp.goi = mean(t(expression[goi,]))
     exp.goi.norm = expression[goi,] - mean.exp.goi # Normalised expression values of goi
     mut_overa.ID = lapply(1:ncol(expression), function(a) {
-    out = if(exp.goi.norm[goi, a] > 0 & copynumber[goi,a] > 0.3) {a} else {NA} # Filter all IDs which are overactive: overexpressed and CNA > 0,3
-    return(out)
+      # Filter all IDs which are overactive: overexpressed and CNA > 0,3
+      out = if(exp.goi.norm[goi, a] > 0 & copynumber[goi,a] > 0.3) {a} else {NA} 
+      return(out)
     })
+  # (2) gene B is inactive (SL)
   } else { # inactive_overactive == 0 chooses inactive
     mut_overa.ID = lapply(1:length(mutation), function(a) {
-    out = ifelse(goi %in% mutation[[a]]$Hugo_Symbol, a, NA) # Filter all IDs which have a mutation of goi
-    return(out)
+      # Filter all IDs which have a mutation of goi
+      out = ifelse(goi %in% mutation[[a]]$Hugo_Symbol, a, NA)
+      return(out)
     })
   }
   
-  not_mut_overa.ID = grep("NA", mut_overa.ID) # ID of samples which have NO inactivity/overactivity of goi
-  mut_overa.ID = as.integer(mut_overa.ID[is.na(mut_overa.ID) == FALSE]) # ID of samples which HAVE inactivity/overactivity of goi
+  # ID of samples which have NO inactivity/overactivity of goi
+  not_mut_overa.ID = grep("NA", mut_overa.ID)
+  # ID of samples which HAVE inactivity/overactivity of goi
+  mut_overa.ID = as.integer(mut_overa.ID[is.na(mut_overa.ID) == FALSE]) 
 
   p.value = sapply(1:nrow(input_data), function(b) {
     mut_overa.data = t(input_data[b, mut_overa.ID])
     not_mut_overa.data = t(input_data[b, not_mut_overa.ID])
     if (less_greater == 1) {
-      p = wilcox.test(mut_overa.data, not_mut_overa.data, alternative = "greater")$p.value # One sided (greater) Wilcoxon Sum Rank Test 
+      # One sided (greater) Wilcoxon Sum Rank Test 
+      p = wilcox.test(mut_overa.data, not_mut_overa.data, alternative = "greater")$p.value 
     } else {
-      p = wilcox.test(mut_overa.data, not_mut_overa.data, alternative = "less")$p.value # One sided (greater) Wilcoxon Sum Rank Test
+      # One sided (greater) Wilcoxon Sum Rank Test
+      p = wilcox.test(mut_overa.data, not_mut_overa.data, alternative = "less")$p.value
     }
     
   })
@@ -313,19 +344,25 @@ To examine gene pairs A and B which fulfill the criteria of SoF and functional e
 To examine gene pairs A and B which fulfill the criteria of gene co expresssion we performe a Spearman correlation test on the expression data. We have 5 inactive genes (goi.SL) and 5 overactive genes (goi.SDL) which are defined as genes A The correlation test now returns all genes B that correlate to gene A in a significant manner (p<0.05).
 ```{r 3_Spearman}
 'Daisy.Spearman' = function(input_genes){
-  Daisy_Spearman = lapply(1:length(input_genes), function(m) { # Build up a list with the 5 goi; lapply: goes through the code for each gene A
+  # Build up a list with the 5 goi; lapply: goes through the code for each gene A
+  Daisy_Spearman = lapply(1:length(input_genes), function(m) {
   goi = input_genes[m]
-
-  p.value = sapply(1:nrow(expression), function(a){  # Creation of a list with the length of the expression data, for the reacent goi, go through every gene and calculate cor.test
-    expression.goi =t(expression[goi,])           # Variable containing expressiondata of the goi (gene A)
-    expression.GeneB =t(expression[a,])           # Variable containing all other genes (gene B)
-    p = cor.test(expression.goi,expression.GeneB, alternative = "greater", method = "spearman", exact = FALSE)$p.value # One sided spearman correlation test  
+  
+  # Creation of a list with the length of the expression data
+  # Go through every gene and calculate cor.test
+  p.value = sapply(1:nrow(expression), function(a){
+    expression.goi =t(expression[goi,]) # Expressiondata of the goi (gene A)
+    expression.GeneB =t(expression[a,]) # Expressiondata of all other genes (gene B)
+    # One sided spearman correlation test
+    p = cor.test(expression.goi,expression.GeneB, alternative = "greater",
+                 method = "spearman", exact = FALSE)$p.value 
   })
   
   # Return a dataframe with the columns genes(HugoSymbols) and p_values (p.values)
   out = data.frame(genes = rownames(expression), p_value = p.value)
   out = out[which(out$p_value < 0.05),] # Filter for significant p.values
-  out = out[which(out$genes != goi),]   # Select onl these wich are not the same gene as the goi (would be a corr of 1)
+  # Only keep genes wich are not goi (would be a corr of 1)
+  out = out[which(out$genes != goi),]
   return(out)
   })
   names(Daisy_Spearman) = input_genes
@@ -338,32 +375,47 @@ Both functions return a list, which contains the five genes of interest, each co
 
 
 ### SL-parter
-SoF:
+SoF
 ```{r 3_SL_SoF}
-SL.SoF = Daisy.Wilcox(goi.SL, copynumber, inactive_overactive = 0, less_greater = 1) # SoF, inactive, one sided Wilcoxon rank test, alternative = "greater"
-head(SL.SoF[[1]]) # Example of SL SoF for first GOI (TP53)
+# SoF, inactive, one sided Wilcoxon rank test, alternative = "greater"
+SL.SoF = Daisy.Wilcox(goi.SL, copynumber,
+                      inactive_overactive = 0,
+                      less_greater = 1)
+# Example of SL SoF for first GOI (TP53)
+head(SL.SoF[[1]])
 ```
-Functional examination:
+Functional examination
 ```{r 3_SL_functional_examination}
-SL.functional.examination = Daisy.Wilcox(goi.SL, kd.ceres, inactive_overactive = 0, less_greater = 0) # Functional examination, inactive, one sided Wilcoxon rank test, alternative = "less"
-head(SL.functional.examination[[1]]) # Example of SL functional examination for first GOI (TP53)
+# Functional examination, inactive, one sided Wilcoxon rank test, alternative = "less"
+SL.functional.examination = Daisy.Wilcox(goi.SL, kd.ceres,
+                                         inactive_overactive = 0,
+                                         less_greater = 0)
+# Example of SL functional examination for first GOI (TP53)
+head(SL.functional.examination[[1]])
 ```
-Gene coexpression:
+Gene coexpression
 ```{r 3_SL_coexpression}
 SL.coexpression = Daisy.Spearman(goi.SL)
-head(SL.coexpression[[1]]) # Example of SL coexpression for first GOI (TP53)
+# Example of SL coexpression for first GOI (TP53)
+head(SL.coexpression[[1]])
 ```
 
 ### SDL-parter
-SoF:
+SoF
 ```{r 3_SDL_SoF}
-SDL.SoF = Daisy.Wilcox(goi.SDL, copynumber, inactive_overactive = 1, less_greater = 1) # SoF, overactive, one sided Wilcoxon rank test, alternative = "greater"
+# SoF, overactive, one sided Wilcoxon rank test, alternative = "greater"
+SDL.SoF = Daisy.Wilcox(goi.SDL, copynumber,
+                       inactive_overactive = 1,
+                       less_greater = 1)
 ```
-Functional examination:
+Functional examination
 ```{r 3_SDL_functional_examination}
-SDL.functional.examination = Daisy.Wilcox(goi.SDL, kd.ceres, inactive_overactive = 1, less_greater = 0) # Functional examination, overactive, one sided Wilcoxon rank test, alternative = "less"
+# Functional examination, overactive, one sided Wilcoxon rank test, alternative = "less"
+SDL.functional.examination = Daisy.Wilcox(goi.SDL, kd.ceres,
+                                          inactive_overactive = 1,
+                                          less_greater = 0)
 ```
-Gene coexpression:
+Gene coexpression
 ```{r 3_SDL_coexpression}
 SDL.coexpression = Daisy.Spearman(goi.SDL)
 ```
@@ -375,13 +427,21 @@ Define function to converge SL/SDL sets.
 'partner' = function(input_genes, SoF, functional.examination, coexpression){
   partner = lapply(1:length(input_genes), function(a) {
     dat_picker.SoF = SoF[[a]]
-    dat_picker.functional_examination = functional.examination[[a]]
+    dat_picker.func.exam = functional.examination[[a]]
     dat_picker.coexpression = coexpression[[a]]
-    partnergenes = Reduce(intersect, list(dat_picker.SoF$genes, dat_picker.functional_examination$genes, dat_picker.coexpression$genes)) # Intersect of genes from all three tests
-    out = data.frame(genes = partnergenes, # Column with reduced genes
-                     SoF = dat_picker.SoF[which(dat_picker.SoF$genes %in% partnergenes),"p_value"], # Column with p value from SoF
-                     functional_examination = dat_picker.functional_examination[which(dat_picker.functional_examination$genes %in% partnergenes),"p_value"], # Column with p value from functional examination
-                     coexpression = dat_picker.coexpression[which(dat_picker.coexpression$genes %in% partnergenes),"p_value"]) # Column with p value from coexpression
+    # Intersect of genes from all three tests
+    partnergenes = Reduce(intersect, list(dat_picker.SoF$genes,
+                                          dat_picker.func.exam$genes,
+                                          dat_picker.coexpression$genes))
+    out = data.frame(
+      genes = partnergenes,
+      # Column with reduced genes
+      SoF = dat_picker.SoF[which(dat_picker.SoF$genes %in% partnergenes), "p_value"],
+      functional_examination = dat_picker.func.exam[which(dat_picker.func.exam$genes
+                                                          %in% partnergenes), "p_value"],
+      coexpression = dat_picker.coexpression[which(dat_picker.coexpression$genes
+                                                   %in% partnergenes), "p_value"]
+    ) # Column with p value from coexpression
     return(out)
   })
   names(partner) = input_genes
@@ -393,30 +453,41 @@ Converge different sets.
 SL.partner = partner(goi.SL, SL.SoF, SL.functional.examination, SL.coexpression)
 SDL.partner = partner(goi.SDL, SDL.SoF, SDL.functional.examination, SDL.coexpression)
 kable(data.frame("SL genes" = names(SL.partner),
-           "SL number of partner" = sapply(1:length(SL.partner), function(a){nrow(SL.partner[[a]])}),
+           "SL number of partner" = sapply(1:length(SL.partner), function(a){
+             nrow(SL.partner[[a]])
+             }),
            "SDL genes" = names(SDL.partner),
-           "SDL number of partner" = sapply(1:length(SDL.partner), function(a){nrow(SDL.partner[[a]])})
+           "SDL number of partner" = sapply(1:length(SDL.partner), function(a){
+             nrow(SDL.partner[[a]])
+             })
            ))
 ```
 
+\newpage
 ## Plotting networks of the Interactions 
 
 Creation of a function for transforming given data into a format iGraph can work with and plotting of the network.
 ```{r 3_network}
-'network' = function(X.partner,width,node.color,frame.color,node.size,Titel,label,GOI){ # (SL/SDL.partner,number,string,string,number,string,NA oder names(plot))
+'network' = function(X.partner,width,node.color,frame.color,node.size,Titel,label,GOI){
+  # Input: SL/SDL.partner, number, string, string, number, string, NA or names(plot)
   
-  color.vector = c("darkred", "darkgreen", "turquoise", "yellow", "orange") # Define colours
+  # Define colours
+  color.vector = c("darkred", "darkgreen", "turquoise", "yellow", "orange")
   # Transform data into a dataframe with 3 colums for each GOI  
   edgelist = lapply(1:length(X.partner), function(a){
     dat_picker = X.partner[[a]]
-    edge.list = data.frame(Gene.A = names(X.partner)[a], Gene.B = dat_picker$genes, colours = color.vector[a]) # 3 columns
+    edge.list = data.frame(Gene.A = names(X.partner)[a],
+                           Gene.B = dat_picker$genes,
+                           colours = color.vector[a])
   })
   edge.list = do.call(rbind, edgelist) # Combine all goi-dataframes to one.
-
-  edge.list$colours = as.character(edge.list$colours) # After the lapply, column "colours" has class 'factor'. For the plottingfunction it must be character 
   
-  net = graph_from_data_frame(edge.list, directed = T) # Tranform the dataframe into an iGraph object
-  layout1 = layout_with_kk(net)                        # Given layout
+  # Change column colours from factor to chracter for plotting function
+  edge.list$colours = as.character(edge.list$colours)
+  
+  # Tranform the dataframe into an iGraph object
+  net = graph_from_data_frame(edge.list, directed = T)
+  layout1 = layout_with_kk(net) # Given layout
 
   # Plotting parameters are defined. vertex= Genes edges = interactions 
   plot(net, layout = layout1, rescale = T,
@@ -442,88 +513,111 @@ Creation of a function for transforming given data into a format iGraph can work
   title(Titel,cex.main=3,col.main="black ")
 
 }
+
 ```
 
-
-Creating a networkplot for the SL-partner.
+\newpage
+Creating a networkplot for the SL-partner
 ```{r 3_SL_network, fig.height = 7, fig.width = 10}
 network(SL.partner,2,"grey","black",3,"Network of SL interaction", NA, goi.SL )
 ```
 
-Creating a network for the SDL-partner.
+\newpage
+Creating a network for the SDL-partner
 ```{r 3_SDL_network, fig.height = 7, fig.width = 10}
 network(SDL.partner,2,"grey","black",3,"Network of SDL interaction", NA, goi.SDL )
 ```
 
 Because there are to many SL/SDL partner to plot a network we reduce SL/SDL partner to the most significants.
+
 To do so, we reduce the number of partner genes for better plotting without removing genes which are connected to more than one GOI.
 ```{r 3_reduce_partner}
-'reduce.partner' = function(list){ 
-  reduced_partner = lapply(1:length(list), function(a){ # Go through every element of SL/SDL partner
+'reduce.partner' = function(list){
+  # Go through every element of SL/SDL partner
+  reduced_partner = lapply(1:length(list), function(a){
     dat_picker = list[[a]]
     
-    if (nrow(dat_picker) > 20) { # (1) If length of dat_picker is larger than 20 reduce to the 20 most significant plus the genes we want to keep
-      
-      dat_picker$order = apply(dat_picker[,2:4], 1, mean) # Create an extra column with the mean p value of all 3 tests
-      ordered_data = dat_picker[order(dat_picker$order),][,1:4] # Order the partner genes after this mean value from most to least significant p value
-      
-      gene_intersect = lapply(1:length(list), function(b){ 
-          as.list(Reduce(intersect, list(dat_picker$genes), list[[b]]$genes)) # Search for genes that are partner for more than one GOI
-      })
-      gene_intersect[a] = NULL # Remove intersect of the GOI partner genes with itself
-      keep_genes = c(gene_intersect[[1]], gene_intersect[[2]], gene_intersect[[3]], gene_intersect[[4]]) # Combine all the genes in a list
-      position = sapply(1:length(keep_genes), function(c){
-        which(as.character(ordered_data$genes) == keep_genes[c])
-      })
-      position = position[which(position > 20)] # Partner genes that are already in the first 20 genes don´t need to be chosen
-      
-      if(length(position) > 3) {position = position[1:3]} # If there are still more than 3 extra genes only choose the first 5
-      out = ordered_data[c(1:20, position),]
-      return(out) # Return reduced data
-    } else {
-      return(ordered_data) # (2) If length of dat_picker is smaller than 20 return data unreduced 
-    }
+    # Create an extra column with the mean p value of all 3 tests
+    dat_picker$order = apply(dat_picker[, 2:4], 1, mean)
+    # Order the partner genes after this mean value from most to least significant p value
+    ordered_data = dat_picker[order(dat_picker$order), ][, 1:4] 
+    
+    gene_intersect = lapply(1:length(list), function(b) {
+      # Search for genes that are partner for more than one GOI
+      as.list(Reduce(intersect, list(dat_picker$genes), list[[b]]$genes)) 
+    })
+    gene_intersect[a] = NULL # Remove intersect of the GOI partner genes with itself
+    keep_genes = c(gene_intersect[[1]],
+                   gene_intersect[[2]],
+                   gene_intersect[[3]],
+                   gene_intersect[[4]]) # Combine all the genes in a list
+    position = sapply(1:length(keep_genes), function(c) {
+      which(as.character(ordered_data$genes) == keep_genes[c])
+    })
+    # Partner genes that are already in the first 20 genes don´t need to be chosen
+    position = position[which(position > 20)]
+    
+    if (length(position) > 3) {
+      # If there are still more than 3 extra genes only choose the first 3
+      position = position[1:3]
+    } 
+    out = ordered_data[c(1:20, position), ]
+    return(out) # Return reduced data
   })
   names(reduced_partner) = names(list)
   return(reduced_partner)
 }
 ```
 
-Reduce SL.parter/SDL.partner to the most significant.
+Reduce SL.parter/SDL.partner to the most significant
 ```{r  3_reduction}
 SL.partner.reduced = reduce.partner(SL.partner)
 SDL.partner.reduced = reduce.partner(SDL.partner)
 
 kable(data.frame("SL genes" = names(SL.partner),
-           "SL partner" = sapply(1:length(SL.partner.reduced), function(a){nrow(SL.partner.reduced[[a]])}),
+           "SL partner" = sapply(1:length(SL.partner.reduced), function(a){
+             nrow(SL.partner.reduced[[a]])
+             }),
            "SDL genes" = names(SDL.partner),
-           "SDL partner" = sapply(1:length(SDL.partner.reduced), function(a){nrow(SDL.partner.reduced[[a]])})
+           "SDL partner" = sapply(1:length(SDL.partner.reduced), function(a){
+             nrow(SDL.partner.reduced[[a]])
+             })
            ))
 ```
 
 Now the number of SL/SDL partner is much better to plot.
 
+\newpage
+## Plotting SL/SDL partner network with reduced number of partner
 
-## Plotting SL/SDL partner network with reduced number of partner.
-
-SL interaction plot with reduced partners.
+SL interaction plot with reduced partners
 ```{r 3_SL_network_reduced, fig.height = 12, fig.width = 15.3}
-network(SL.partner.reduced,4,"grey","grey",12,"Network of SL interaction (reduced)", names(plot), goi.SL)
+network(SL.partner.reduced,4,"grey","grey",12,"Network of SL interaction (reduced)",
+        names(plot),
+        goi.SL)
 ```
 
-SDL interaction plot with reduced partners.
+\newpage
+SDL interaction plot with reduced partners
 ```{r 3_SDL_network_reduced, fig.height = 12, fig.width = 15}
-network(SDL.partner.reduced,4,"grey","grey",12,"Network of SDL interaction (reduced)", names(plot),goi.SDL)
+network(SDL.partner.reduced,4,"grey","grey",12,"Network of SDL interaction (reduced)",
+        names(plot),
+        goi.SDL)
 ```
 
-
+\newpage
 # References 
 
 ## Articles
+
 1.) Jerby-Arnon, L., et al. (2014). "Predicting Cancer-Specific Vulnerability via Data-Driven Detection of Synthetic Lethality." Cell 158(5): 1199-1209.
+
 2.) Ashworth, A., et al. (2011). "Genetic Interactions in Cancer Progression and Treatment." Cell 145(1): 30-38.
+
 3.) O'Neil, N. J., et al. (2017). "Synthetic lethality and cancer." Nature Reviews Genetics 18: 613.
 	
 ## Figures
-Figure 1 - https://crukcambridgecentre.org.uk/patient-care/clinical-research/head-and-neck
-Figure 2 - Jerby-Arnon, L., et al. (2014). "Predicting Cancer-Specific Vulnerability via Data-Driven Detection of Synthetic Lethality." Cell 158(5): 1199-1209.
+
+Figure 1 - Jerby-Arnon, L., et al. (2014). "Predicting Cancer-Specific Vulnerability via Data-Driven Detection of Synthetic Lethality." Cell 158(5): 1199-1209.
+
+Figure 3 - Leemans, C. R. et al. (2018). The molecular landscape of head and neck cancer. Nat. Rev. Cancer 18, 269-282.
