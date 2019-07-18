@@ -38,13 +38,13 @@ root.dir = dirname(rstudioapi::getSourceEditorContext()$path)
 # General Introduction
 Head and neck cancer is defined as a group of cancers, concerning the mouth, nose and throat (Figure 1). With over 90%, Squamous cell carcinoma is the most common type in HNC patients. With 5.5 million affected people in 2015 it is the seventh most frequent cancer and the ninth most frequent cause of death. 75% of all HNC cancer types were caused by tobacco or alcohol. Although the cure rate for HNC is really high, around 50 % of concerned patients remain suffering from an advanced disease.
 
-```{r, echo=FALSE, fig.cap="Most affected tissues and organs by head and neck cancer", out.width='100%'}
+```{r, echo=FALSE, fig.cap="Most affected tissues and organs by head and neck cancer", fig.align = 'center', out.width='100%'}
 knitr::include_graphics("images/HNC_Kopf.png")
 ```
 
 In the century of next generation sequencing, the genome became an interesting target for scientists. Approaches that directly affect important oncogenes often fail due to the fact that these genes play an important role in healthy cells. The researchers in our paper (Jerby-Arnon, L., et al. (2014). "Predicting Cancer-Specific Vulnerability via Data-Driven Detection of Synthetic Lethality." Cell 158(5): 1199-1209.) investigated synthetic lethality and synthetic dosage lethality that uses gene interactions to affect tumorous proliferation. Synthetic letahlity describes a gene interaction in which single-gene defects are compatible with cell viability, but the combination of gene effects results in cell death. Synthetic dosage lethality occurs, when the overexpression of one gene is combined with the knockout of another gene.
 \newpage
-```{r, echo=FALSE, fig.cap="Daisy-Workflow", out.width='100%'}
+```{r, echo=FALSE, fig.cap="Daisy-Workflow", fig.align = 'center', out.width='100%'}
 knitr::include_graphics("images/Daisy.png")
 ```
 
@@ -52,7 +52,7 @@ Daisy consists of three statistical approaches (Figure 2), each processing diffe
 
 \newpage
 ## Milestones
-```{r, echo=FALSE, fig.cap="Milestones of our project", out.width='100%'}
+```{r, echo=FALSE, fig.cap="Milestones of our project", fig.align = 'center', out.width='100%'}
 knitr::include_graphics("images/milestones.png")
 ```
 
@@ -638,7 +638,7 @@ Result: TP53, FAT1, CDKN2A, KRT3 and CASP8 are the 5 most frequently deleterious
 
 \newpage
 According to Leemans et al. (2018) these are frequent mutations in HNC:
-```{r, echo=FALSE, fig.cap="Genes with frequent and highly significant somatic genetic changes in HNSCC", out.width='100%'}
+```{r, echo=FALSE, fig.cap="Genes with frequent and highly significant somatic genetic changes in HNSCC", fig.align = 'center', out.width='100%'}
 knitr::include_graphics("images/frequent_mutations_HNC.png")
 ```
 
@@ -648,8 +648,8 @@ Compare our SL GOI with genes from literature.
 # create dataframe with goi from literature
 goi.lit = data.frame(Gene = c("CDKN2A", "TP53", "CCND1", "EGFR", "PIK3CA", "PTEN", "FAT1",
                               "AJUBA", "NOTCH1", "KMT2D", "NSD1"),
-                     "Mutation frequency" = c(22, 72, 0.6, 4, 18, 3, 23, 7, 18, 16, 12),
-                     "CNA frequency" = c(32, 1.4, 25, 11, 21, 4, 8, 1, 4, 0.4, 0.8)) 
+                     "Mutation.frequency" = c(22, 72, 0.6, 4, 18, 3, 23, 7, 18, 16, 12),
+                     "CNA.frequency" = c(32, 1.4, 25, 11, 21, 4, 8, 1, 4, 0.4, 0.8)) 
 
 # Search for the position of goi.lit in mutated genes of HNC samples
 heatmap_position = sapply(1:nrow(goi.lit), function(a) {
@@ -659,10 +659,10 @@ heatmap_position = sapply(1:nrow(goi.lit), function(a) {
   return(position)
 })
 
-goi.lit$"Heatmap position" = heatmap_position # Add heatmap position to goi.lit
+goi.lit$"Heatmap.position" = heatmap_position # Add heatmap position to goi.lit
 rownames(goi.lit) = goi.lit$Gene
 goi.lit$Gene = NULL
-goi.lit = goi.lit[order(goi.lit$"Heatmap position"),]
+goi.lit = goi.lit[order(goi.lit$"Heatmap.position"),]
 kable(goi.lit) # Show a table of goi.lit
 ```
 
@@ -1057,8 +1057,7 @@ head(test.set)
 \newpage
 ## Train the model
 ```{r 4_train}
-lrfit = glm(mutation ~ ., data=train.set,family="binomial") 
-lrfit
+lrfit = glm(mutation ~ ., data=train.set,family="binomial")
 summary(lrfit)
 ```
 
@@ -1095,13 +1094,13 @@ results_df = lapply(1:length(threshold_list), function(a) {
 })
 
 results_df = rbindlist(results_df) # Bind all the lists together
-# Calculate the recall
-recall = apply(results_df, 1, function(x){ x[["TP"]]/(x[["TP"]]+x[["FN"]])}) 
-# Calculate the precision
-precision = apply(results_df, 1, function(x){ x[["TP"]]/(x[["TP"]]+x[["FP"]])}) 
+# Calculate the recall; recall = TP/(TP+FN)
+recall = apply(results_df, 1, function(x){ x[["TP"]] / (x[["TP"]]+x[["FN"]]) }) 
+# Calculate the precision; precision = TP/(TP+FP)
+precision = apply(results_df, 1, function(x){ x[["TP"]] / (x[["TP"]]+x[["FP"]]) }) 
 results_df$recall = recall # Bind recall to the data
 results_df$precision = precision # Bind precision to the data
-head(results_df) # Look at the data
+results_df # Look at the data
 ```
 
 Plot the data
