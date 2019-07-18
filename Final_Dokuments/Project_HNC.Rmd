@@ -1,8 +1,8 @@
 ---
-title: "Presentation Project Head and Neck Cancer"
+title: "Project Head and Neck Cancer"
 author: "Nils Mechtel, Tobias Hub, Niklas Urbanek, Pascal Poc"
-date: "24. July 2019"
-output: pdf_document 
+date: "21. July 2019"
+output: pdf_document
 fig_caption: yes
 ---
 
@@ -19,6 +19,8 @@ knitr::opts_chunk$set(echo = TRUE,
 library(knitr)      # RMarkdown
 library(rstudioapi)
 library(ggplot2)
+library(ggpubr)     # Histograms
+theme_set(theme_pubr())
 library(png)        # Read, write and display images
 library(tidyverse)  # Data manipulation
 library(cluster)    # Clustering algorithms
@@ -33,21 +35,34 @@ library(data.table)
 root.dir = dirname(rstudioapi::getSourceEditorContext()$path)
 ```
 
-# Predicting Cancer-Specific Vulnerability via DAISY System
+# General Introduction
+Head and neck cancer is defined as a group of cancers, concerning the mouth, nose and throat (Figure 1). With over 90%, Squamous cell carcinoma is the most common type in HNC patients. With 5.5 million affected people in 2015 it is the seventh most frequent cancer and the ninth most frequent cause of death. 75% of all HNC cancer types were caused by tobacco or alcohol. Although the cure rate for HNC is really high, around 50 % of concerned patients remain suffering from an advanced disease.
 
-```{r, echo=FALSE, fig.cap="Daisy-Workflow", fig.align = 'center', out.width='110%'}
+```{r, echo=FALSE, fig.cap="Most affected tissues and organs by head and neck cancer", fig.align = 'center', out.width='100%'}
+knitr::include_graphics("images/HNC_Kopf.png")
+```
+
+In the century of next generation sequencing, the genome became an interesting target for scientists. Approaches that directly affect important oncogenes often fail due to the fact that these genes play an important role in healthy cells. The researchers in our paper (Jerby-Arnon, L., et al. (2014). "Predicting Cancer-Specific Vulnerability via Data-Driven Detection of Synthetic Lethality." Cell 158(5): 1199-1209.) investigated synthetic lethality and synthetic dosage lethality that uses gene interactions to affect tumorous proliferation. Synthetic letahlity describes a gene interaction in which single-gene defects are compatible with cell viability, but the combination of gene effects results in cell death. Synthetic dosage lethality occurs, when the overexpression of one gene is combined with the knockout of another gene.
+\newpage
+```{r, echo=FALSE, fig.cap="Daisy-Workflow", fig.align = 'center', out.width='100%'}
 knitr::include_graphics("images/Daisy.png")
 ```
 
-\newpage
-# Milestones
+Daisy consists of three statistical approaches (Figure 2), each processing different sub data from a cancer Dataset. The first strategy is “Survival of the fittest”, where just deleted SL-paired genes were selected, that are not in a surviving cancer culture. The second strategy is “functional examination” where SL genes were identified, by knocking out genes, with the additive, that the SL partners are inactive. If the tumor shows decreased proliferation, it accounts for the SL pair group. The third strategy is “pairwise gene co- expression” that is based on the fact that SL pairs are often closely related in biological pathways and therefore exhibit similar occurrence. If a gene pair fulfills every of the three criteria, it might be a potential SL pair according to DAISY. To check for SDL partners the criteria of inactive or active is replaced by under- or overactive, measured through expression numbers and copy number alterations.
 
-```{r, echo=FALSE, fig.cap="Milestones of our project", fig.align = 'center', out.width='110%'}
+\newpage
+## Milestones
+```{r, echo=FALSE, fig.cap="Milestones of our project", fig.align = 'center', out.width='100%'}
 knitr::include_graphics("images/milestones.png")
 ```
 
+The strategy of our project consisted of 4 main milestones (Figure 3). At first we familiarized with the data and did the first descriptive statistics in milestone 1. Secondly, we identified potential genes “of interest” (SL and SDL candidates), according to DAISY-System. In our third milestone, the core task of our project was implemented. The identification of SL and SDL pairs was executed using functional examination, survival of the fittest and pairwise co-expression. Lastly, in our fourth milestone we tested logistic regression to predict mutations.
 
-```{r load_data, include = FALSE}
+\newpage
+# 1. Data Cleanup & Descriptive Statistics
+
+## Loading data and defining HNC variables
+```{r load_data}
 # Load dataset
 allDepMapData = readRDS("DepMap19Q1_allData.RDS")
 
@@ -71,53 +86,427 @@ kd.ceres.HNC = kd.ceres[ , which(colnames(kd.ceres) %in% ID)]
 kd.prob.HNC = kd.prob[ , which(colnames(kd.prob) %in% ID)]
 mutation.HNC = mutation[ID]
 ```
-```{r 1_cleanup_expression, include = FALSE}
+
+\newpage
+## Expression analysis
+
+
+### Checking for NAs
+```{r 1_expression_NA}
+sum(is.na(expression) == TRUE)
+```
+Result: There are no NAs in the expression data.
+
+### Examine expression values
+
+Create a reference group of expression data
+```{r 1_expression_values1}
 '%!in%' = function(x,y)!('%in%'(x,y)) # Define function "is not in"
-# create reference
+
 expression.reference = expression[ , which(colnames(expression) %!in% ID)]
+```
+and calculate their mean.
+```{r 1_expression_values2}
 mean.exp.reference = apply(expression.reference, 1, mean)
-# normalisation
+mean.exp.HNC = apply(expression.HNC, 1, mean)
+```
+Firstly, we want to check if the gene expressions of the HNC samples and the reference group are normally distributed.
+```{r 1_expression_values3}
+HNC = data.frame(expression_values = mean.exp.HNC, sample = "HNC")
+Reference = data.frame(expression_values = mean.exp.reference, sample = "Reference")
+mean.expression = rbind(Reference, HNC)
+
+ggqqplot(mean.expression, x = "expression_values",
+   color = "sample",
+   palette = c("#FC4E07", "#0073C2FF"), # Red and blue
+   ggtheme = theme_pubclean())
+```
+
+Result: Gene espression is neither in HNC samples nor in reference samples normally distributed.
+
+<br/><br/>
+
+Then we compare HNC and reference group gene expression using a statistical test. A Wilcoxon rank sum test must be applied because the expression is not normally distributed.
+```{r 1_expression_values4}
+wilcox.test(mean.exp.HNC, mean.exp.reference)
+```
+Result: Mean gene expression differs between HNC and reference group samples significantly.
+
+<br/><br/>
+
+Next we check if the gene expression differs whether a gene has a deleterious mutation or not. AS an example, we compare the mean TP53 gene expression of all samples with and without deleterious TP53 mutation.
+```{r 1_expression_values5}
+# Get the ID of samples whith and without deleterious mutation
+TP53.mut.ID = lapply(1:length(mutation), function(a) {
+  dat_picker = mutation[[a]]
+  dat_picker = dat_picker[which(dat_picker$isDeleterious == TRUE),]
+  # Filter all IDs which have a deleterious mutation of TP53
+  out = ifelse("TP53" %in% dat_picker$Hugo_Symbol, a, NA)
+    return(out)
+  })
+
+# ID of samples with no TP53 mutation
+TP53.not_mut.ID = grep("NA", TP53.mut.ID)
+# ID of samples with TP53 mutation
+TP53.mut.ID = as.integer(TP53.mut.ID[is.na(TP53.mut.ID) == FALSE])
+
+# Create two vectors of expression values
+# Expression of TP53 deleterious mutated samples
+exp.TP53.mut = as.numeric(expression["TP53", TP53.mut.ID])
+# Expression of TP53 not deleterious mutated samples
+exp.TP53.not_mut = as.numeric(expression["TP53", TP53.not_mut.ID])
+```
+Compare the expression values by applying Wilcoxon rank sum test.
+```{r 1_expression_values6}
+wilcox.test(exp.TP53.mut , exp.TP53.not_mut)
+```
+Result: Gene expression of TP53 as an example gene varies significantly whether the samples has or has no deleterious TP53 mutation.
+
+<br/><br/>
+
+At last, we plot a histogram to check how the expression values are distributed.
+```{r 1_expression_values7}
+gghistogram(as.data.frame(mean.exp.HNC),
+            x = "mean.exp.HNC",
+            xlab = "expression value",
+            bins = 60,
+            fill = "#0073C2FF",
+            color = "#0073C2FF",
+            add = "mean",
+            rug = TRUE)
+```
+
+
+Result: The most genes have expression values around 0.
+
+<br/><br/>
+
+### Plot the 20 most under- and overexpressed genes of HNC samples.
+For this we need to normalize the expression data from HNC samples
+```{r 1_expression_plot1}
 expr.HNC.norm = as.data.frame(apply(expression.HNC, 2, function(x) {
   x - mean.exp.reference
 }))
-rm(expression.reference, mean.exp.reference)
 ```
-```{r 1_cleanup_copynumber, include = FALSE}
-# create reference
-copynumber.reference = copynumber[,which(colnames(copynumber) %!in% ID)]
-# remove NAs
-NA.rows = apply(copynumber,1, function(x) {
+and calculate the mean of the normalesid expression values.
+```{r 1_expression_plot2}
+mean.expr.HNC.norm = as.data.frame(apply(expr.HNC.norm, 1, mean))
+```
+
+Then create a dataframe with needed information for the barplot
+```{r 1_expression_plot3}
+barplot.data = data.frame(Genes=rownames(expr.HNC.norm),
+                          Values=mean.expr.HNC.norm)
+names(barplot.data) = c("Genes", "Values")
+barplot.data$Group = ifelse(barplot.data$Values>0,"overexpressed","underexpressed")
+barplot.data = barplot.data[order(barplot.data$Values),]
+barplot.data = barplot.data[c(1:19, (nrow(barplot.data)-20):nrow(barplot.data)),]
+```
+\newpage
+and plot this dataframe.
+```{r 1_expression_plot4}
+ggplot(barplot.data,aes(x=Genes,y=Values,fill=Group)) +
+  ylab("Normalized mean expression values") +
+  geom_bar(stat="identity") +
+  coord_flip() +
+  theme(axis.text.y = element_text(size=6))
+```
+
+### Cleanup of the enviroment
+```{r 1_expression_cleanup}
+rm(HNC, Reference, mean.expression, TP53.mut.ID, TP53.not_mut.ID, exp.TP53.mut,
+   exp.TP53.not_mut, mean.expr.HNC.norm, barplot.data, mean.exp.HNC,
+   mean.exp.reference, expression.reference)
+```
+
+\newpage
+## Copynumber Alteration
+
+### Analysis of NA values
+
+Examination of NA values in the copynumber.HNC data
+```{r 1_copynumber_NA1}
+# Sum up all NAs in each row
+NA.rows = apply(copynumber.HNC,1, function(x) {
           sum(is.na(x))
 })
+# Define all rows cotaining missing values
 NA.rows = which( NA.rows > 0)
+length(NA.rows)
+```
+Only 107 out of 23299 gens have NA values and are therefore deleted from the copynumber.HNC dataframe
+```{r 1_copynumber_NA2}
 copynumber.HNC = copynumber.HNC[-NA.rows,]
-copynumber.reference = copynumber.reference[-NA.rows,]
-copynumber = copynumber[-NA.rows,]
-# normalisation
+dim(copynumber.HNC)
+```
+Creating a reference data and examination of its NA values
+```{r 1_copynumber_NA3}
+copynumber.reference = copynumber[,which(colnames(copynumber) %!in% ID)]
+dim(copynumber.reference)
+```
+
+```{r 1_copynumber_NA4}
+NA.rows.ref = apply(copynumber.reference,1, function(x) {
+          sum(is.na(x))
+})
+NA.rows.ref = which( NA.rows.ref > 0)
+length(NA.rows.ref)
+```
+
+```{r 1_copynumber_NA5}
+summary(NA.rows == NA.rows.ref)
+```
+Genes with NA values are the same for the HNC samples and all the other samples. Therefore, they can be deleted in the reference data as well.
+
+```{r 1_copynumber_NA6}
+copynumber.reference = copynumber.reference[-NA.rows.ref,]
+copynumber = copynumber[-NA.rows.ref,]
+dim(copynumber.reference)
+dim(copynumber)
+```
+### Normalisation of the copynumber values
+
+For the HNC normalisation we will use the mean CN value per gen of the reference data.
+
+```{r 1_copynumber_normalisation1}
 copynumber.ref.mean = apply(copynumber.reference,1, mean)
+copynumber.HNC.mean = apply(copynumber.HNC ,1, mean)
+```
+
+Creating a dataframe of all copynumber values. The values are normalized to the mean copynumbers of the reference data.
+```{r 1_copynumber_normalisation2}
 cna.HNC.norm = as.data.frame(apply(copynumber.HNC, 2, function(x) {
   x - copynumber.ref.mean
 }))
-rm(NA.rows, copynumber.ref.mean, copynumber.reference)
 ```
-```{r 1_cleanup_mutation, include = FALSE}
-'mutation.clean' <- function(data){
-  cleaned_data = lapply(1:length(data), function(a) {
-    dat_picker = data[[a]]
-    dat_picker = dat_picker[, c("Hugo_Symbol", "isDeleterious")]
-    dat_picker = dat_picker[which(dat_picker$isDeleterious == TRUE), ]
-    return(dat_picker)
-  })
-  names(cleaned_data) = names(data)
-  return(cleaned_data)
-}
-mutation = mutation.clean(mutation)
-mutation.HNC = mutation.clean(mutation.HNC)
+
+Creating a dataframe of HNC copynumber values. The values are normalized to the mean copynumbers of the reference data. For further analysing the dataframe is ordered in a decreasing manner.
+```{r  1_copynumber_normalisation3}
+Values = copynumber.HNC.mean - copynumber.ref.mean
+copynumber.HNC.norm = data.frame(values = sort(Values, decreasing = TRUE),
+                                 genes = row.names(copynumber.HNC))
+copynumber.HNC.norm$Group = ifelse(copynumber.HNC.norm$values > 0,"high CN","low CN")
+```
+
+Plotting genes with the highest and lowest copynumbers.
+```{r  1_copynumber_plot}
+ggplot(copynumber.HNC.norm[c(1:20,23172:23192),],aes(x=genes,y=values,fill=Group)) +
+  geom_bar(stat="identity") +
+  ylab("Normalized mean CNA values") +
+  coord_flip() +
+  theme(axis.text.y = element_text(size=6))
+```
+
+
+### Cleanup of the environment
+```{r 1_copynumber_cleanup}
+rm(NA.rows, NA.rows.ref, copynumber.HNC.norm, copynumber.HNC.mean,
+   copynumber.ref.mean, copynumber.reference, Values)
+```
+
+\newpage
+## Mutation
+
+### Find Mutations with the highest frequencies
+
+Melt all mutation matrices together as data frame and find out most frequent mutations
+```{r 1_muation_frequency1}
+all_mutations = do.call(rbind,mutation)
+all_mut_genes = table(all_mutations$Hugo_Symbol)
+all_mut_genes_df = as.data.frame(all_mut_genes)
+```
+
+Order the found mutations by frequencies and extract 30 most frequent
+```{r 1_muation_frequency2}
+ID_all_highest_frequencies = head(order(all_mut_genes_df[["Freq"]], decreasing = TRUE), 30)
+all_mut_genes_df_highest_30 = all_mut_genes_df[
+  which(rownames(all_mut_genes_df) %in% ID_all_highest_frequencies), ]
+ID_all_highest_30_frequencies = order(all_mut_genes_df_highest_30["Freq"],
+                                      decreasing = TRUE) 
+all_mut_genes_highest_30_ordered = all_mut_genes_df_highest_30[ID_all_highest_30_frequencies, ]
+head(all_mut_genes_highest_30_ordered)
+```
+
+Name the newly established data frame for the look
+```{r 1_muation_frequency3}
+ID_all_highest_30_frequencies = order(all_mut_genes_df_highest_30["Freq"],
+                                      decreasing = TRUE)
+all_mut_genes_df_highest_30_ordered = all_mut_genes_df_highest_30[ID_all_highest_30_frequencies,]
+rownames(all_mut_genes_df_highest_30_ordered) = 1:30
+colnames_ordered = c("Gene", "Freq")
+colnames(all_mut_genes_df_highest_30_ordered) = colnames_ordered
+```
+
+Melt only HNC sample mutation matrices together and find out most frequent mutations
+
+```{r 1_muation_frequency4}
+HNC_mutations = do.call(rbind, mutation.HNC)
+HNC_mut_genes = table(HNC_mutations$Hugo_Symbol)
+HNC_mut_genes_df = as.data.frame(HNC_mut_genes)
+```
+
+Order the found mutations by frequencies and name the data frame
+```{r 1_muation_frequency5}
+ID_HNC_highest_frequencies = head(order(HNC_mut_genes_df[["Freq"]],
+                                        decreasing = TRUE),
+                                        length(ID))
+HNC_mut_genes_df_highest_ordered = HNC_mut_genes_df[ID_HNC_highest_frequencies, ]
+rownames(HNC_mut_genes_df_highest_ordered) = 1:length(ID)
+colnames(HNC_mut_genes_df_highest_ordered) = colnames_ordered
+```
+
+### Plotting mutation frequencies of all samples and of HNC samples
+
+Plot mutations in all samples
+```{r  1_muation_frequency6, fig.height = 7}
+ggplot(data = all_mut_genes_df_highest_30_ordered, aes(x=Gene, y=Freq)) +
+  geom_bar(stat = "identity", width = 0.5, fill="steelblue") +
+  geom_text(aes(label=Freq), vjust=-0.3, size=2.5) +
+  theme_grey() + coord_flip()
+```
+
+Plot mutations in HNC samples
+```{r  1_muation_frequency7, fig.height = 7}
+ggplot(data = HNC_mut_genes_df_highest_ordered, aes(x=Gene, y=Freq)) +
+  geom_bar(stat = "identity", width = 0.5, fill="steelblue") +
+  geom_text(aes(label=Freq), vjust=-0.3, size=3.5) +
+  theme_grey() +
+  coord_flip()
 ```
 
 
 \newpage
-# Identify genes of interest
+### Clean mutation from unnecessary data
+
+Due to the needed conditions in the following "Daisy-tests" we now clean the mutation data and extract all "isDeleterious" mutations, since they are essential for the survival or death of a cell. In this way, we later are able to find our genes of interest for the SL more easily.
+
+```{r 1_muation_cleanmutation}
+'mutation.clean' = function(data){
+  # Data will be mutation (length of 544) or mutation.HNC (length of 27)
+  cleaned_data = lapply(1:length(data), function(a) {
+    dat_picker = data[[a]] # Pick the element of the list on position 'a'
+    # Choose columns with gene name and isDeleterious
+    dat_picker = dat_picker[, c("Hugo_Symbol", "isDeleterious")]
+    # Choose only deleterious mutations
+    dat_picker = dat_picker[which(dat_picker$isDeleterious == TRUE),]
+    return(dat_picker)
+  })
+  names(cleaned_data) = names(data) # Keep the names of the input data
+  return(cleaned_data)
+}
+# Apply the new function on our two mutation data sets to clean them
+mutation = mutation.clean(mutation)
+mutation.HNC = mutation.clean(mutation.HNC)
+head(mutation.HNC[[1]])
+```
+
+### Cleanup of the enviroment
+```{r 1_muation_cleanup}
+rm(all_mutations, all_mut_genes, all_mut_genes_df, ID_all_highest_30_frequencies,
+   ID_all_highest_frequencies, all_mut_genes_df_highest_30,
+   all_mut_genes_df_highest_30_ordered, colnames_ordered, HNC_mutations,
+   HNC_mut_genes, HNC_mut_genes_df, ID_HNC_highest_frequencies,
+   HNC_mut_genes_df_highest_ordered)
+```
+
+\newpage
+## Knockdown
+
+### Overview of kd.ceres values in HNC patients
+```{r 1_knockdown_NA}
+sum(is.na(kd.ceres.HNC) == TRUE) # Checking for NAs
+range(kd.ceres.HNC)# Range of data
+```
+
+### Examine knockdown values
+```{r 1_knockdown_values_dist}
+# Definition of a compare group
+kd.ceres.reference = kd.ceres[ , which(colnames(kd.ceres) %!in% ID)]
+
+# Defining mean of knockdown values from comparegroup and HNC patients
+mean.kd.ceres.reference = apply(kd.ceres.reference, 1, mean)
+mean.kd.ceres.HNC = apply(kd.ceres.HNC, 1, mean)
+
+# Checking if knockdown values are normally distributed
+kd.ceres.HNC.dist = data.frame(kd_values = mean.kd.ceres.HNC, sample = "Knockdown HNC")
+kd.ceres.reference.dist = data.frame(kd_values = mean.kd.ceres.reference,
+                                     sample = "reference HNC")
+mean.kd.ceres.dist = rbind(kd.ceres.reference.dist, kd.ceres.HNC.dist)
+
+ggqqplot(mean.kd.ceres.dist, x = "kd_values",
+   color = "sample",
+   palette = c("#FC4E07", "#0073C2FF"),
+   ggtheme = theme_grey())
+
+
+
+```
+
+Result: kd.ceres values are not normal distributed
+
+<br/><br/>
+
+Checking the distribution for knockdown values
+```{r 1_knockdown_values2}
+gghistogram(kd.ceres.HNC.dist, x = "kd_values", xlab = "knockdown values", bins = 60,
+            fill = "#0073C2FF", color = "#0073C2FF",
+            add = "mean", rug = TRUE)+theme_grey()
+```
+
+
+To check if  there are more essential genes in HNC, the means of HNC patients with the reference group were compared.
+```{r 1_knockdown_values1}
+# Are there genes that tend to be more essential in HNC?
+esgene1 = kd.ceres.HNC[which(rowMeans(kd.ceres.HNC)< rowMeans(kd.ceres.reference)),]
+# Sort essential genes
+esgene1= esgene1[order(rowMeans(esgene1)),]
+```
+
+### Example EGFR
+Checking the summary of an example gene
+```{r 1_knockdown_EGFR}
+# Transposition of dataframe esgene1
+esgeneT = as.data.frame(t(esgene1))
+summary(esgeneT$EGFR)
+```
+
+\newpage
+### Boxplot of 20 random genes
+```{r 1_knockdown_boxplot}
+# Boxplot of 20 random genes according to knockdown analysis
+boxplot(sample(esgeneT,20, replace = FALSE),
+        horizontal =F,
+        las = 2, #flip gene names
+        main="Knockdown values of 20 random genes",
+        xlab="genes",
+        ylab="Knockdown values",
+        col="blue",
+        border="brown",
+        outline = TRUE,
+        notch = TRUE)
+abline(col = c("blue", "red", "black", "orange"),
+        lty = 2)
+```
+
+\newpage
+### Applying Wilcoxon rank sum test because knockdown values are not normally distributed
+To check if the HNC knockdown values differ from the compare group, a wilcoxon test is executed.
+```{r 1_knockdown_Wilcox}
+wilcox.test(mean.kd.ceres.HNC, mean.kd.ceres.reference)
+```
+The test shows, that ther isn`t a significiant difference between HNC patients and the reference group. Due  to the fact, that knocking down of essential genes has the same effect in healthy cells, than in tumorous cells.
+
+
+
+
+### Cleanup of the enviroment
+```{r 1_knockdown_cleanup}
+rm(kd.ceres.HNC.dist, kd.ceres.reference, kd.ceres.reference.dist, mean.kd.ceres.HNC,
+   mean.kd.ceres.reference, mean.kd.ceres.dist, esgene1, esgeneT)
+```
+
+\newpage
+# 2. Identify genes of interest
 
 ## k-means clustering of CNA and expression data with normalized values (-reference) for SDL GOI
 To find potential genes for SDL pair detection, clustering through k-means was executed. 
@@ -283,12 +672,13 @@ goi.SL = rownames(heatmap.data)[1:5]
 goi.SL
 ```
 
-```{r 2_SLgoi_cleanup, include = FALSE}
+Clean up of the enviroment
+```{r 2_SLgoi_cleanup}
 rm(mutation.HNC.df, heatmap.genes, heatmap.data, heatmap_position)
 ```
 
 \newpage
-# Find SL/SDL partner
+# 3. Find SL/SDL partner
 
 ## SL/SDL partner search following the daisy model
 
@@ -607,8 +997,10 @@ network(SDL.partner.reduced,4,"grey","grey",12,"Network of SDL interaction (redu
         goi.SDL)
 ```
 
+In Conclusion, the search for potential SL and SDL partner genes led us to our two main networks depicted above. Most of the found SL/SDL partners play crucial roles in key steps of cell development, for example like fostering transcription and translation or directly influencing the cell organization. This explains why the tested tumor cells died after a knockdown/knockout of those genes and why they became essential for the cells.
+
 \newpage
-# Mutation prediction via logistic regression
+# 4. Mutation prediction via logistic regression
 
 ## Prepare data for regression model
 ```{r 4_df}
@@ -742,6 +1134,13 @@ ggplot(results_df, aes(recall,precision)) +
         strip.text.y = element_text(angle = 0))
 ```
 
+
+Clean the enviroment
+```{r 4_cleanup}
+rm(precision, prediction, recall, regression.genes, threshhold_ls, inTrain,
+   regression.model, results_df, test.set, threshold_list, train.set)
+```
+
 \newpage
 # References 
 
@@ -755,6 +1154,8 @@ ggplot(results_df, aes(recall,precision)) +
 	
 ## Figures
 
-Figure 1 - Jerby-Arnon, L., et al. (2014). "Predicting Cancer-Specific Vulnerability via Data-Driven Detection of Synthetic Lethality." Cell 158(5): 1199-1209.
+Figure 1 - https://crukcambridgecentre.org.uk/patient-care/clinical-research/head-and-neck
 
-Figure 3 - Leemans, C. R. et al. (2018). The molecular landscape of head and neck cancer. Nat. Rev. Cancer 18, 269-282.
+Figure 2 - Jerby-Arnon, L., et al. (2014). "Predicting Cancer-Specific Vulnerability via Data-Driven Detection of Synthetic Lethality." Cell 158(5): 1199-1209.
+
+Figure 4 - Leemans, C. R. et al. (2018). The molecular landscape of head and neck cancer. Nat. Rev. Cancer 18, 269-282.

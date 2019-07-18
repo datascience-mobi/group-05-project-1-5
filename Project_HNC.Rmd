@@ -1000,15 +1000,15 @@ network(SDL.partner.reduced,4,"grey","grey",12,"Network of SDL interaction (redu
 In Conclusion, the search for potential SL and SDL partner genes led us to our two main networks depicted above. Most of the found SL/SDL partners play crucial roles in key steps of cell development, for example like fostering transcription and translation or directly influencing the cell organization. This explains why the tested tumor cells died after a knockdown/knockout of those genes and why they became essential for the cells.
 
 \newpage
-# 4. Mutation prediction via logistical regression
+# 4. Mutation prediction via logistic regression
 
 ## Prepare data for regression model
 ```{r 4_df}
 # Reduce all genes to those of which we have expression, copynumber and knockdown data.
 regression.genes = Reduce(intersect,
-                          list(rownames(expression),
-                               rownames(copynumber),
-                               rownames(kd.ceres)
+                          list(rownames(expression.HNC),
+                               rownames(copynumber.HNC),
+                               rownames(kd.ceres.HNC)
                           ))
 
 # Create a dataframe with expression, CNA, knockdown and mutation data from a HNC sample.
@@ -1028,87 +1028,101 @@ regression.data = lapply(1:length(ID), function(a){
 # Bind these 27 dataframes to one dataframe
 regression.data = do.call(rbind, regression.data)
 
-rm(regression.genes)
 dim(regression.data)
 head(regression.data)
 ```
 
+\newpage
 Reformat the data because strings can not be an input for a machine learning model
 ```{r 4_factor_mutation}
 regression.data$mutation = factor(regression.data$mutation, levels = c("FALSE", "TRUE"))
+# Reformat the rownames
+rownames(regression.data) = regression.data$genes
+# Get rid of the gene names becaue they are now the rownames
+regression.data = regression.data[,2:ncol(regression.data)]
 head(regression.data)
 ```
 
 Split the data into train and test-data
 ```{r 4_split_data}
+# 75% of data is used to train, 25% to test the regression model
 inTrain = createDataPartition(y = regression.data$mutation, p = .75, list = FALSE)
-train.set = regression.data[inTrain,] # Only get training data
-rownames(train.set) = train.set$genes # Reformat the rownames
-# Get rid of the gene names becaue they are now the rownames
-train.set = train.set[,2:ncol(train.set)]
-head(train.set) # Check the data
-
+# Only get training data
+train.set = regression.data[inTrain,]
+head(train.set)
+# Only get testing data
 test.set = regression.data[-inTrain,]
-rownames(test.set) = test.set$genes
-test.set = test.set[,2:ncol(test.set)]
 head(test.set)
 ```
 
 \newpage
 ## Train the model
 ```{r 4_train}
-lrfit = glm(mutation ~ ., data=train.set,family="binomial")
-summary(lrfit)
+regression.model = glm(mutation ~ ., data = train.set, family = "binomial")
+summary(regression.model)
 ```
 
 ## Evaluate the precision and the recall of the model
 ```{r 4_test}
-pred = predict(lrfit,newdata=test.set,type="response")
-hist(pred) # Look at the predictions
+prediction = predict(regression.model, newdata = test.set, type="response")
+hist(prediction) # Look at the predictions
 ```
 
 
 
-Devide prediction in tressholds
+Devide prediction in threshholds
 ```{r 4_treshhold}
-threshhold_ls = seq(min(pred), max(pred), by=0.001) # Make a thresshold list
-threshold_list = lapply(seq_along(threshhold_ls), function(a){
-  table(pred>threshhold_ls[a], test.set$mutation)
+threshhold_ls = seq(min(prediction), max(prediction), by = 0.001) # Make a thresshold list
+length(threshhold_ls)
+
+threshold_list = lapply(1:length(threshhold_ls), function(a){
+  # Check for every threshhold:
+  table(prediction > threshhold_ls[a], # Returns TRUE or FALSE
+        test.set$mutation) # Comparing if return fits actual bimodal value
+  # Counting True Negative, False Negative, False Positive, True Positive
   })
+ 
+threshold_list[[1]]
 ```
 
-Calculate the precision values
+\newpage
+Calculate the recall and precision values
 ```{r 4_precision}
-# Make a df out of the list of lists
+# Make a dataframe out of the list of lists
 results_df = lapply(1:length(threshold_list), function(a) {
   threshold = threshold_list[[a]]
   threshold_value = threshhold_ls[[a]]
   
-  df_prec_recall = as.data.frame(list(threshold["FALSE", "FALSE"],
+  df_precision_recall = as.data.frame(list(threshold["FALSE", "FALSE"],
                                       threshold["FALSE", "TRUE"],
                                       threshold["TRUE", "FALSE"],
                                       threshold["TRUE", "TRUE"]))
-  df_prec_recall$threshold = threshold_value
-  colnames(df_prec_recall) = c("TN", "FN", "FP", "TP", "Thresh")
-  return(df_prec_recall)
+  df_precision_recall$threshold = threshold_value
+  colnames(df_precision_recall) = c("TN", "FN", "FP", "TP", "Thresh")
+  return(df_precision_recall)
 })
 
-results_df = rbindlist(results_df) # Bind all the lists together
-# Calculate the recall; recall = TP/(TP+FN)
-recall = apply(results_df, 1, function(x){ x[["TP"]] / (x[["TP"]]+x[["FN"]]) }) 
-# Calculate the precision; precision = TP/(TP+FP)
+# Bind all the lists together
+results_df = do.call(rbind, results_df)
+
+# Calculate the recall; recall = True positive / all positive events
+recall = apply(results_df, 1, function(x){ x[["TP"]] / (x[["TP"]]+x[["FN"]]) })
+
+# Calculate the precision; precision = True positive / all positive detected events
 precision = apply(results_df, 1, function(x){ x[["TP"]] / (x[["TP"]]+x[["FP"]]) }) 
+
 results_df$recall = recall # Bind recall to the data
 results_df$precision = precision # Bind precision to the data
-results_df # Look at the data
+head(results_df) # Look at the data
 ```
 
+\newpage
 Plot the data
 ```{r 4_plot}
 ggplot(results_df, aes(recall,precision)) + 
   geom_point() + 
   geom_line() + 
-  ggtitle("Precision/Recall plotting (Log.Reg.)") +
+  ggtitle("Precision/Recall plotting (Logistic Regression)") +
   ylab("Precision") +
   xlab("Recall") +
   theme_bw(base_size = 7) +
@@ -1123,8 +1137,8 @@ ggplot(results_df, aes(recall,precision)) +
 
 Clean the enviroment
 ```{r 4_cleanup}
-rm(precision, pred, recall, regression.genes, threshhold_ls, inTrain, lrfit, results_df,
-   test.set, threshold_list, train.set)
+rm(precision, prediction, recall, regression.genes, threshhold_ls, inTrain,
+   regression.model, results_df, test.set, threshold_list, train.set)
 ```
 
 \newpage
