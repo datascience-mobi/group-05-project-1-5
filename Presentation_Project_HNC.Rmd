@@ -207,8 +207,6 @@ goi.sdl = goi.sdl[order(goi.sdl$expression,decreasing=TRUE),]
 kable(goi.sdl[1:5,])
 
 goi.SDL = as.character(goi.sdl$genes[1:5])
-# Clean enviroment
-rm(emp, i, km.genes, y_kmeans, kmeans, km.copynumber, km.data, km.expression, comb.ex.cna) 
 ```
 
 ## Investigate high frequencies of deleterious mutations SL GOI
@@ -277,7 +275,7 @@ goi.lit = goi.lit[order(goi.lit$"Heatmap.position"),]
 kable(goi.lit) # Show a table of goi.lit
 ```
 
-Because our most frequent mutated genes almost aproximately match with frequent mutations from literature we choose the 5 genes with most frequent mutations in HNC samples.
+Because our most frequent mutated genes aproximately match with frequent mutations from literature we choose the 5 genes with most frequent mutations in HNC samples.
 ```{r 2_SLgoi3}
 goi.SL = rownames(heatmap.data)[1:5]
 goi.SL
@@ -741,6 +739,8 @@ ggplot(results_df, aes(recall,precision)) +
         legend.title= element_blank(),
         strip.text.y = element_text(angle = 0))
 ```
+
+Looking on the precision it can be said that our logistic regression model for prediction of deleterious mutation in head and neck cancer scores very poorly. To be just in about 0,3% of all cases precise with the prediction is an unusuable model and has plenty of room for improvement. Especially regarding to declining precision towards a recall of 1.00, which is a true mutation and a result on which basis further decisions would be drawn.
 
 \newpage
 # References 
