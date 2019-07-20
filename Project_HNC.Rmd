@@ -514,23 +514,23 @@ To find potential genes for SDL pair detection, clustering through k-means was e
 # Intersect set of expression and CNA
 km.genes = Reduce(intersect, list(rownames(expression.HNC), rownames(copynumber.HNC))) 
 
-# Create data rame with expression and CNA values
-km.expression = expr.HNC.norm[km.genes,]
-km.copynumber = cna.HNC.norm[km.genes,]
-km.data = lapply(1:length(ID), function(x) {
-  out = data.frame(genes =km.genes,
-                   expression = km.expression[,x],
-                   copynumber = km.copynumber[,x])
-  return (out)
-})
-# Combine rows for k mean clustering
-comb.ex.cna = do.call(rbind, km.data)
-comb.ex.cna = comb.ex.cna[which(comb.ex.cna$copynumber >= 1 &
-                                  comb.ex.cna$expression >= quantile(comb.ex.cna$expression,0.95)),]
+# Create data rame with row means of expression and CNA values
+km.expression = rowMeans(expr.HNC.norm[km.genes,])
+km.copynumber = rowMeans(cna.HNC.norm[km.genes,])
+
+# Combine expression and CNA valuzes for k mean clustering
+comb.ex.cna = cbind(km.expression, km.copynumber)
+# Converting Matrix into a data frame
+comb.ex.cna = as.data.frame(comb.ex.cna, row.names = NULL, optional = FALSE,
+              cut.names = FALSE, fix.empty.names = TRUE,
+              stringsAsFactors = default.stringsAsFactors())
+
+comb.ex.cna = comb.ex.cna[which(comb.ex.cna$km.copynumber >= 0.3 &
+                                  comb.ex.cna$km.expression >= quantile(comb.ex.cna$km.expression,0.9)),]
 
 # Plotting of normalized expression valuess against CNA data for a short overview. 
-ggplot(comb.ex.cna[, 2:3],
-       aes(x = expression, y = copynumber, color = "smooth")) +
+ggplot(comb.ex.cna[,1:2],
+       aes(x = km.expression, y = km.copynumber, color = "smooth")) +
   geom_point()
 ```
 
@@ -539,7 +539,7 @@ To check the perfect ammount of clusters in k-means, an ellbow test was implemen
 # Ellbow method to find optimal ammount of clusters
 emp = vector() # Create an empty vector
 # Calculate the sum within squared values for 10 clusters
-for (i in 1:10) emp[i] = sum(kmeans(comb.ex.cna[2:3], i)$withinss)
+for (i in 1:10) emp[i] = sum(kmeans(comb.ex.cna[1:2], i)$withinss)
 emp # Look at the sum within squares for 10 clusters
 
 # Plotting of Ellbow method
@@ -548,7 +548,7 @@ plot(1:10,
      type = 'b',
      main = paste('The Elbow Method'),
      xlab = 'Number of clusters',
-     ylab = 'EMP') 
+     ylab = 'Sum of squares') 
 ```
 
 
@@ -559,7 +559,7 @@ Result: The ellbow test shows that 3 clusters are sufficient.
 K-means were executed and plotted. Afterwards the potential SDL candidates were identified through higher expression values.
 ```{r 2_kmeansclustering}
 # Fitting k-means to the dataset - elbow method (k = 3) 
-kmeans = kmeans(x = comb.ex.cna[,2:3], centers = 3,iter.max = 1000, nstart = 1) 
+kmeans = kmeans(x = comb.ex.cna[,1:2], centers = 3,iter.max = 1000, nstart = 1) 
 y_kmeans = kmeans$cluster 
 
 # Visualising the clusters
@@ -586,20 +586,19 @@ In order to define SDL candidates, the cluster with highest expression values wa
 ```{r 2_goiSDL}
 comb.ex.cna = cbind(comb.ex.cna, y_kmeans)# Combine kmeans with genes
 # Sort comb.ex.cna data decresing for selecting adequate number of cluster
-comb.ex.cna = comb.ex.cna[order(comb.ex.cna$expression,decreasing =TRUE),]
+comb.ex.cna = comb.ex.cna[order(comb.ex.cna$km.expression,decreasing =TRUE),]
 
 # Filtering of the most expressed and alterated genes
-goi.sdl = comb.ex.cna[which(comb.ex.cna$y_kmeans == comb.ex.cna[1,4]),]
+goi.sdl = comb.ex.cna[which(comb.ex.cna$y_kmeans == comb.ex.cna[1,3]),]
 
 # Sort dataframe 
-goi.sdl = goi.sdl[order(goi.sdl$expression,decreasing=TRUE),]
+goi.sdl = goi.sdl[order(goi.sdl$km.expression,decreasing=TRUE),]
 kable(goi.sdl[1:5,])
 
 goi.SDL = as.character(goi.sdl$genes[1:5])
 # Clean enviroment
-rm(emp, i, km.genes, y_kmeans, kmeans, km.copynumber, km.data, km.expression, comb.ex.cna) 
+rm(emp, i, km.genes, y_kmeans, kmeans, km.copynumber, km.expression, comb.ex.cna) 
 ```
-
 ## Investigate high frequencies of deleterious mutations SL GOI
 
 Create a dataframe with data for the heatmap.
