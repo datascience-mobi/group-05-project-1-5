@@ -125,7 +125,7 @@ To find potential genes for SDL pair detection, clustering through k-means was e
 # Intersect set of expression and CNA
 km.genes = Reduce(intersect, list(rownames(expression.HNC), rownames(copynumber.HNC))) 
 
-# Create data rame with expression and CNA values
+# Create data frame with expression and CNA values
 km.expression = expr.HNC.norm[km.genes,]
 km.copynumber = cna.HNC.norm[km.genes,]
 km.data = lapply(1:length(ID), function(x) {
@@ -139,7 +139,7 @@ comb.ex.cna = do.call(rbind, km.data)
 comb.ex.cna = comb.ex.cna[which(comb.ex.cna$copynumber >= 1 &
                                   comb.ex.cna$expression >= quantile(comb.ex.cna$expression,0.95)),]
 
-# Plotting of normalized expression valuess against CNA data for a short overview. 
+# Plotting of normalized expression valuess against CNA data for a short overview 
 ggplot(comb.ex.cna[, 2:3],
        aes(x = expression, y = copynumber, color = "smooth")) +
   geom_point()
@@ -147,11 +147,10 @@ ggplot(comb.ex.cna[, 2:3],
 
 To check the perfect ammount of clusters in k-means, an ellbow test was implemented.
 ```{r 2_ellbow method}
-# Ellbow method to find optimal ammount of clusters
+# Ellbow method: to find optimal ammount of clusters
 emp = vector() # Create an empty vector
 # Calculate the sum within squared values for 10 clusters
 for (i in 1:10) emp[i] = sum(kmeans(comb.ex.cna[2:3], i)$withinss)
-emp # Look at the sum within squares for 10 clusters
 
 # Plotting of Ellbow method
 plot(1:10,
