@@ -89,7 +89,7 @@ copynumber.reference = copynumber[,which(colnames(copynumber) %!in% ID)]
 NA.rows = apply(copynumber,1, function(x) {
           sum(is.na(x))
 })
-NA.rows = which( NA.rows > 0)
+NA.rows = which(NA.rows > 0)
 copynumber.HNC = copynumber.HNC[-NA.rows,]
 copynumber.reference = copynumber.reference[-NA.rows,]
 copynumber = copynumber[-NA.rows,]
@@ -101,11 +101,11 @@ cna.HNC.norm = as.data.frame(apply(copynumber.HNC, 2, function(x) {
 rm(NA.rows, copynumber.ref.mean, copynumber.reference)
 ```
 ```{r 1_cleanup_mutation, include = FALSE}
-'mutation.clean' <- function(data){
+'mutation.clean' = function(data){
   cleaned_data = lapply(1:length(data), function(a) {
     dat_picker = data[[a]]
     dat_picker = dat_picker[, c("Hugo_Symbol", "isDeleterious")]
-    dat_picker = dat_picker[which(dat_picker$isDeleterious == TRUE), ]
+    dat_picker = dat_picker[which(dat_picker$isDeleterious == TRUE),]
     return(dat_picker)
   })
   names(cleaned_data) = names(data)
@@ -622,6 +622,7 @@ network(SDL.partner.reduced,4,"grey","grey",12,"Network of SDL interaction (redu
         names(plot),
         goi.SDL)
 ```
+
 
 \newpage
 # Mutation prediction via logistic regression
