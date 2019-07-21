@@ -125,23 +125,23 @@ To find potential genes for SDL pair detection, clustering through k-means was e
 # Intersect set of expression and CNA
 km.genes = Reduce(intersect, list(rownames(expression.HNC), rownames(copynumber.HNC))) 
 
-# Create data frame with expression and CNA values
-km.expression = expr.HNC.norm[km.genes,]
-km.copynumber = cna.HNC.norm[km.genes,]
-km.data = lapply(1:length(ID), function(x) {
-  out = data.frame(genes =km.genes,
-                   expression = km.expression[,x],
-                   copynumber = km.copynumber[,x])
-  return (out)
-})
-# Combine rows for k mean clustering
-comb.ex.cna = do.call(rbind, km.data)
-comb.ex.cna = comb.ex.cna[which(comb.ex.cna$copynumber >= 1 &
-                                  comb.ex.cna$expression >= quantile(comb.ex.cna$expression,0.95)),]
+# Create dataframe with row means of expression and CNA values
+km.expression = rowMeans(expr.HNC.norm[km.genes,])
+km.copynumber = rowMeans(cna.HNC.norm[km.genes,])
 
-# Plotting of normalized expression valuess against CNA data for a short overview 
-ggplot(comb.ex.cna[, 2:3],
-       aes(x = expression, y = copynumber, color = "smooth")) +
+# Combine expression and CNA valuzes for k mean clustering
+comb.ex.cna = cbind(km.expression, km.copynumber)
+# Converting Matrix into a data frame
+comb.ex.cna = as.data.frame(comb.ex.cna, row.names = NULL, optional = FALSE,
+              cut.names = FALSE, fix.empty.names = TRUE,
+              stringsAsFactors = default.stringsAsFactors())
+
+comb.ex.cna = comb.ex.cna[which(comb.ex.cna$km.copynumber >= 0.3 &
+                                  comb.ex.cna$km.expression >= quantile(comb.ex.cna$km.expression,0.9)),]
+
+# Plotting of normalized expression valuess against CNA data for a short overview
+ggplot(comb.ex.cna[,1:2],
+       aes(x = km.expression, y = km.copynumber, color = "smooth")) +
   geom_point()
 ```
 
@@ -150,7 +150,7 @@ To check the perfect ammount of clusters in k-means, an ellbow test was implemen
 # Ellbow method: to find optimal ammount of clusters
 emp = vector() # Create an empty vector
 # Calculate the sum within squared values for 10 clusters
-for (i in 1:10) emp[i] = sum(kmeans(comb.ex.cna[2:3], i)$withinss)
+for (i in 1:10) emp[i] = sum(kmeans(comb.ex.cna[1:2], i)$withinss)
 
 # Plotting of Ellbow method
 plot(1:10,
@@ -158,7 +158,7 @@ plot(1:10,
      type = 'b',
      main = paste('The Elbow Method'),
      xlab = 'Number of clusters',
-     ylab = 'EMP') 
+     ylab = 'Sum of squares') 
 ```
 
 
@@ -169,7 +169,7 @@ Result: The ellbow test shows that 3 clusters are sufficient.
 K-means were executed and plotted. Afterwards the potential SDL candidates were identified through higher expression values.
 ```{r 2_kmeansclustering}
 # Fitting k-means to the dataset - elbow method (k = 3) 
-kmeans = kmeans(x = comb.ex.cna[,2:3], centers = 3,iter.max = 1000, nstart = 1) 
+kmeans = kmeans(x = comb.ex.cna[,1:2], centers = 3,iter.max = 1000, nstart = 1) 
 y_kmeans = kmeans$cluster 
 
 # Visualising the clusters
@@ -188,7 +188,7 @@ clusplot(comb.ex.cna,
          ylab = 'CNA')
 ```
 
-The Plot "Cluster of genes" features the 3 clusters of values from expression and CNA data. Due to little variance between the data pairs, the intersection set is comparatively big. 
+The Plot "Clusters of Genes" features the 3 clusters of values from expression and CNA data. Due to little variance between the data pairs, the intersection set is comparatively big. 
 
 <br/><br/>
 
@@ -196,16 +196,21 @@ In order to define SDL candidates, the cluster with highest expression values wa
 ```{r 2_goiSDL}
 comb.ex.cna = cbind(comb.ex.cna, y_kmeans)# Combine kmeans with genes
 # Sort comb.ex.cna data decresing for selecting adequate number of cluster
-comb.ex.cna = comb.ex.cna[order(comb.ex.cna$expression,decreasing =TRUE),]
+comb.ex.cna = comb.ex.cna[order(comb.ex.cna$km.expression,decreasing =TRUE),]
 
 # Filtering of the most expressed and alterated genes
-goi.sdl = comb.ex.cna[which(comb.ex.cna$y_kmeans == comb.ex.cna[1,4]),]
+goi.sdl = comb.ex.cna[which(comb.ex.cna$y_kmeans == comb.ex.cna[1,3]),]
 
 # Sort dataframe 
-goi.sdl = goi.sdl[order(goi.sdl$expression,decreasing=TRUE),]
+goi.sdl = goi.sdl[order(goi.sdl$km.expression,decreasing=TRUE),]
 kable(goi.sdl[1:5,])
 
-goi.SDL = as.character(goi.sdl$genes[1:5])
+goi.SDL = rownames(goi.sdl)[1:5]
+```
+
+
+```{r 2_cleanup, include=FALSE}
+rm(emp, i, km.genes, y_kmeans, kmeans, km.copynumber, km.expression, comb.ex.cna) 
 ```
 
 ## Investigate high frequencies of deleterious mutations SL GOI
@@ -280,7 +285,7 @@ goi.SL = rownames(heatmap.data)[1:5]
 goi.SL
 ```
 
-```{r 2_SLgoi_cleanup, include = FALSE}
+```{r 2_SLgoi_cleanup, include=FALSE}
 rm(mutation.HNC.df, heatmap.genes, heatmap.data, heatmap_position)
 ```
 
@@ -289,9 +294,20 @@ rm(mutation.HNC.df, heatmap.genes, heatmap.data, heatmap_position)
 
 ## SL/SDL partner search following the daisy model
 
-To examine gene pairs A and B which fulfill the criteria of SoF and functional examination we performe a Wilcoxon rank sum test on copynumber or CERES knockdown data. We have 5 inactive genes (goi.SL) and 5 overactive genes (goi.SDL) which are defined as genes A. The Wilcoxon rank sum test now returns all genes B which pass the test in a significant manner (p<0.05). 
+In further steps all test sets get converged and only genes which pass each test significantly are chosen as a SL/SDL partner. Therefore, we only need to apply the tests on those genes which are present in all three data inputs.
+```{r Daisy_genes}
+Daisy.genes = Reduce(intersect,
+                          list(rownames(copynumber), # For SoF
+                               rownames(kd.ceres), # For functional examination
+                               rownames(expression) # For gene coexpression
+                          ))
+```
+
+To examine gene pairs A and B which fulfill the criteria of SoF and functional examination we performe a Wilcoxon rank sum test on copynumber or CERES knockdown data. We have 5 inactive genes (goi.SL) and 5 overactive genes (goi.SDL) which are defined as genes A. The Wilcoxon rank sum test now returns all genes B which pass the test in a significant manner (p<0.05).
+
 ```{r 3_Wilcox}
 'Daisy.Wilcox' = function(input_genes,input_data, inactive_overactive, less_greater){
+  input_data = input_data[Daisy.genes,]
   Daisy_Wilcox = lapply(1:length(input_genes), function(m) {
   goi = input_genes[m] # Set 1 of 5 goi
   # Depending on SL or SDL partner search
@@ -343,22 +359,23 @@ To examine gene pairs A and B which fulfill the criteria of SoF and functional e
 To examine gene pairs A and B which fulfill the criteria of gene co expresssion we performe a Spearman correlation test on the expression data. We have 5 inactive genes (goi.SL) and 5 overactive genes (goi.SDL) which are defined as genes A The correlation test now returns all genes B that correlate to gene A in a significant manner (p<0.05).
 ```{r 3_Spearman}
 'Daisy.Spearman' = function(input_genes){
+  Daisy.expression = expression[Daisy.genes,]
   # Build up a list with the 5 goi; lapply: goes through the code for each gene A
   Daisy_Spearman = lapply(1:length(input_genes), function(m) {
   goi = input_genes[m]
   
   # Creation of a list with the length of the expression data
   # Go through every gene and calculate cor.test
-  p.value = sapply(1:nrow(expression), function(a){
-    expression.goi =t(expression[goi,]) # Expressiondata of the goi (gene A)
-    expression.GeneB =t(expression[a,]) # Expressiondata of all other genes (gene B)
+  p.value = sapply(1:nrow(Daisy.expression), function(a){
+    expression.goi =t(Daisy.expression[goi,]) # Expressiondata of the goi (gene A)
+    expression.GeneB =t(Daisy.expression[a,]) # Expressiondata of all other genes (gene B)
     # One sided spearman correlation test
     p = cor.test(expression.goi,expression.GeneB, alternative = "greater",
                  method = "spearman", exact = FALSE)$p.value 
   })
   
   # Return a dataframe with the columns genes(HugoSymbols) and p_values (p.values)
-  out = data.frame(genes = rownames(expression), p_value = p.value)
+  out = data.frame(genes = rownames(Daisy.expression), p_value = p.value)
   out = out[which(out$p_value < 0.05),] # Filter for significant p.values
   # Only keep genes wich are not goi (would be a corr of 1)
   out = out[which(out$genes != goi),]
@@ -372,8 +389,9 @@ To examine gene pairs A and B which fulfill the criteria of gene co expresssion 
 
 Both functions return a list, which contains the five genes of interest, each containing a dataframe with all genes examined as potential SL/SDL partners plus their calculated p-values.
 
-
+\newpage
 ### SL-parter
+
 SoF
 ```{r 3_SL_SoF}
 # SoF, inactive, one sided Wilcoxon rank test, alternative = "greater"
@@ -447,6 +465,7 @@ Define function to converge SL/SDL sets.
   return(partner)
 }
 ```
+\newpage
 Converge different sets.
 ```{r 3_converging}
 SL.partner = partner(goi.SL, SL.SoF, SL.functional.examination, SL.coexpression)
@@ -738,8 +757,6 @@ ggplot(results_df, aes(recall,precision)) +
         legend.title= element_blank(),
         strip.text.y = element_text(angle = 0))
 ```
-
-Looking on the precision it can be said that our logistic regression model for prediction of deleterious mutation in head and neck cancer scores very poorly. To be just in about 0,3% of all cases precise with the prediction is an unusuable model and has plenty of room for improvement. Especially regarding to declining precision towards a recall of 1.00, which is a true mutation and a result on which basis further decisions would be drawn.
 
 \newpage
 # References 
