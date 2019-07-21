@@ -35,14 +35,14 @@ root.dir = dirname(rstudioapi::getSourceEditorContext()$path)
 
 # Predicting Cancer-Specific Vulnerability via DAISY System
 
-```{r, echo=FALSE, fig.cap="Daisy-Workflow", fig.align = 'center', out.width='110%'}
+```{r image1, echo=FALSE, fig.cap="Daisy-Workflow", fig.align = 'center', out.width='110%'}
 knitr::include_graphics("images/Daisy.png")
 ```
 
 \newpage
 # Milestones
 
-```{r, echo=FALSE, fig.cap="Milestones of our project", fig.align = 'center', out.width='110%'}
+```{r image2, echo=FALSE, fig.cap="Milestones of our project", fig.align = 'center', out.width='110%'}
 knitr::include_graphics("images/milestones.png")
 ```
 
@@ -119,7 +119,7 @@ mutation.HNC = mutation.clean(mutation.HNC)
 \newpage
 # Identify genes of interest
 
-## k-means clustering of CNA and expression data with normalized values (-reference) for SDL GOI
+## K-means clustering of CNA and expression data with normalized values for SDL GOI
 To find potential genes for SDL pair detection, clustering through k-means was executed. 
 ```{r 2_kmeans}
 # Intersect set of expression and CNA
@@ -251,7 +251,7 @@ Result: TP53, FAT1, CDKN2A, KRT3 and CASP8 are the 5 most frequently deleterious
 
 \newpage
 According to Leemans et al. (2018) these are frequent mutations in HNC:
-```{r, echo=FALSE, fig.cap="Genes with frequent and highly significant somatic genetic changes in HNSCC", fig.align = 'center', out.width='100%'}
+```{r 2_SLgoi_lit, echo=FALSE, fig.cap="Genes with frequent and highly significant somatic genetic changes in HNSCC", fig.align = 'center', out.width='100%'}
 knitr::include_graphics("images/frequent_mutations_HNC.png")
 ```
 
@@ -341,7 +341,7 @@ To examine gene pairs A and B which fulfill the criteria of SoF and functional e
       # One sided (greater) Wilcoxon Sum Rank Test 
       p = wilcox.test(mut_overa.data, not_mut_overa.data, alternative = "greater")$p.value 
     } else {
-      # One sided (greater) Wilcoxon Sum Rank Test
+      # One sided (less) Wilcoxon Sum Rank Test
       p = wilcox.test(mut_overa.data, not_mut_overa.data, alternative = "less")$p.value
     }
     
@@ -646,7 +646,7 @@ regression.data = lapply(1:length(ID), function(a){
   regression.data = data.frame("genes" = paste(regression.genes, ID[a], sep = "_"),
                                "expression" = expression.HNC[regression.genes, a],
                                "copynumber" = copynumber.HNC[regression.genes, a],
-                               "kockdown" = kd.ceres.HNC[regression.genes, a],
+                               "knockdown" = kd.ceres.HNC[regression.genes, a],
                                "mutation" = regression.mutation)
 })
 
