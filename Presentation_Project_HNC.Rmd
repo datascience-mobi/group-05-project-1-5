@@ -311,7 +311,7 @@ To examine gene pairs A and B which fulfill the criteria of SoF and functional e
   Daisy_Wilcox = lapply(1:length(input_genes), function(m) {
   goi = input_genes[m] # Set 1 of 5 goi
   # Depending on SL or SDL partner search
-  # (1) gene B is overactive (SDL)
+  # (1) gene A is overactive (SDL)
   if(inactive_overactive == 1) { # inactive_overactive == 1 chooses overactive
     mean.exp.goi = mean(t(expression[goi,]))
     exp.goi.norm = expression[goi,] - mean.exp.goi # Normalised expression values of goi
@@ -320,7 +320,7 @@ To examine gene pairs A and B which fulfill the criteria of SoF and functional e
       out = if(exp.goi.norm[goi, a] > 0 & copynumber[goi,a] > 0.3) {a} else {NA} 
       return(out)
     })
-  # (2) gene B is inactive (SL)
+  # (2) gene A is inactive (SL)
   } else { # inactive_overactive == 0 chooses inactive
     mut_overa.ID = lapply(1:length(mutation), function(a) {
       # Filter all IDs which have a mutation of goi
