@@ -338,10 +338,10 @@ To examine gene pairs A and B which fulfill the criteria of SoF and functional e
     mut_overa.data = t(input_data[b, mut_overa.ID])
     not_mut_overa.data = t(input_data[b, not_mut_overa.ID])
     if (less_greater == 1) {
-      # One sided (greater) Wilcoxon Sum Rank Test 
+      # One sided (greater) Wilcoxon rank sum test 
       p = wilcox.test(mut_overa.data, not_mut_overa.data, alternative = "greater")$p.value 
     } else {
-      # One sided (less) Wilcoxon Sum Rank Test
+      # One sided (less) Wilcoxon rank sum test
       p = wilcox.test(mut_overa.data, not_mut_overa.data, alternative = "less")$p.value
     }
     
